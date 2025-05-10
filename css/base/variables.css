@@ -1,0 +1,23 @@
+:root {
+    /* Local Community Market color palette */
+    --color-primary: #E1AD01;           /* Mustard Yellow – warmth, joy */
+    --color-primary-dark: #C29400;      /* Slightly darker mustard for depth */
+    --color-secondary: #D16D4A;         /* Terracotta – earthy feel */
+    --color-accent: #228B22;            /* Forest Green – freshness */
+
+    --color-text: #2E2E2E;              /* Slightly darker for better contrast */
+    --color-text-light: #5A5A5A;        /* Muted text */
+
+    --color-background: #FFFBEA;        /* Soft light background to complement mustard */
+    --color-card: #FFFFFF;              /* Neutral white card background */
+    --color-border: #ECD9C6;            /* Warm neutral border */
+
+    --color-success: #228B22;           /* Reuse forest green for positive status */
+    --color-error: #D16D4A;             /* Terracotta for errors */
+    --color-warning: #E1AD01;           /* Mustard yellow for warnings */
+
+    --border-radius: 12px;
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --font-family: 'Helvetica Neue', Arial, sans-serif;
+}

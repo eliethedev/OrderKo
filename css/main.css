@@ -1,0 +1,25 @@
+/* Import base styles */
+@import 'base/variables.css';
+@import 'base/reset.css';
+@import 'base/typography.css';
+
+/* Import layout styles */
+@import 'layouts/header.css';
+@import 'layouts/footer.css';
+@import 'layouts/grid.css';
+
+/* Import component styles */
+@import 'components/buttons.css';
+@import 'components/cards.css';
+@import 'components/forms.css';
+@import 'components/icons.css';
+@import 'components/modals.css';
+@import 'components/navigation.css';
+
+/* Import page-specific styles */
+@import 'pages/auth.css';
+@import 'pages/home.css';
+@import 'pages/business.css';
+@import 'pages/cart.css';
+@import 'pages/orders.css';
+@import 'pages/profile.css';

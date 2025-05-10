@@ -1,0 +1,99 @@
+/* Base Styles */
+:root {
+    /* Local Community Market color palette */
+    --color-primary: #E1AD01;           /* Mustard Yellow – warmth, joy */
+    --color-primary-dark: #C29400;      /* Slightly darker mustard for depth */
+    --color-secondary: #D16D4A;         /* Terracotta – earthy feel */
+    --color-accent: #228B22;            /* Forest Green – freshness */
+
+    --color-text: #2E2E2E;              /* Slightly darker for better contrast */
+    --color-text-light: #5A5A5A;        /* Muted text */
+
+    --color-background: #FFFBEA;        /* Soft light background to complement mustard */
+    --color-card: #FFFFFF;              /* Neutral white card background */
+    --color-border: #ECD9C6;            /* Warm neutral border */
+
+    --color-success: #228B22;           /* Reuse forest green for positive status */
+    --color-error: #D16D4A;             /* Terracotta for errors */
+    --color-warning: #E1AD01;           /* Mustard yellow for warnings */
+
+    --border-radius: 12px;
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --font-family: 'Helvetica Neue', Arial, sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--color-background);
+    color: var(--color-text);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    padding-bottom: 70px; /* Space for bottom navigation */
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+a {
+    text-decoration: none;
+    color: var(--color-primary);
+}
+
+button {
+    cursor: pointer;
+    font-family: var(--font-family);
+    border: none;
+    background: none;
+}
+
+/* Buttons */
+.primary-button {
+    background-color: var(--color-primary);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: var(--border-radius);
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.primary-button:hover {
+    background-color: var(--color-primary-dark);
+}
+
+.secondary-button {
+    background-color: var(--color-background);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    padding: 10px 16px;
+    border-radius: var(--border-radius);
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.secondary-button:hover {
+    background-color: var(--color-border);
+}
+
+.secondary-button i {
+    margin-right: 6px;
+}
+
+.secondary-button.small {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+}
+
+.full-width {
+    width: 100%;
+}
