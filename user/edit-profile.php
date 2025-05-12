@@ -2,22 +2,18 @@
 session_start();
 require_once '../config/database.php';
 
-// Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
     header('Location: ../login.php');
     exit;
 }
 
-// Fetch user details
 $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
 $stmt->execute([$_SESSION['user_id']]);
 $user = $stmt->fetch();
 
-// Handle profile update
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $errors = [];
     
-    // Validate inputs
     $full_name = trim($_POST['full_name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $current_password = trim($_POST['current_password'] ?? '');
@@ -34,7 +30,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = "Invalid email format";
     }
     
-    // Check if email is already taken by another user
     if ($email !== $user['email']) {
         $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
         $stmt->execute([$email, $_SESSION['user_id']]);
@@ -43,7 +38,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
-    // Password change validation
     if (!empty($new_password)) {
         if (empty($current_password)) {
             $errors[] = "Current password is required to change password";
@@ -60,12 +54,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
-    // If no errors, update the profile
     if (empty($errors)) {
         try {
             $pdo->beginTransaction();
             
-            // Update basic profile information
             $stmt = $pdo->prepare("UPDATE users SET 
                 full_name = ?,
                 email = ?,
@@ -73,7 +65,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 WHERE id = ?");
             $stmt->execute([$full_name, $email, $_SESSION['user_id']]);
             
-            // Update password if provided
             if (!empty($new_password)) {
                 $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
                 $stmt = $pdo->prepare("UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
@@ -82,7 +73,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $pdo->commit();
             
-            // Update session with user details
             $_SESSION['user_name'] = $full_name;
             $_SESSION['user_email'] = $email;
             

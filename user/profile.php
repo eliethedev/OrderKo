@@ -133,6 +133,15 @@ function getOrderItems($pdo, $order_id) {
                 </div>
                 <i class="fas fa-chevron-right"></i>
             </div>
+            
+            <div class="option-card" onclick="window.location.href='my-businesses.php'" style="background-color: rgba(225, 173, 1, 0.1);">
+                <div class="option-icon" style="background-color: var(--color-primary); color: white;"><i class="fas fa-store"></i></div>
+                <div class="option-details">
+                    <h3>My Businesses</h3>
+                    <p>Manage your businesses & products</p>
+                </div>
+                <i class="fas fa-chevron-right"></i>
+            </div>
         </section>
 
         <!-- Recent Orders -->
