@@ -34,7 +34,8 @@ if (!isset($_SESSION['user_id'])) {
             <h1>OrderKo</h1>
             <div class="header-icons">
                 <button class="icon-button"><i class="fas fa-search"></i></button>
-                <button class="icon-button"><i class="fas fa-user"></i></button>
+                <?php include_once 'includes/cart_icon.php'; ?>
+                <button class="icon-button" onclick="window.location.href='profile.php'"><i class="fas fa-user"></i></button>
             </div>
         </div>
         <div class="location-bar">

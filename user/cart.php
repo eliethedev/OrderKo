@@ -122,13 +122,26 @@ function calculateDeliveryFee($distance) {
         <div class="header-container">
             <button class="back-button" onclick="history.back()"><i class="fas fa-arrow-left"></i></button>
             <h1>Your Cart</h1>
+            <?php include_once 'includes/cart_icon.php'; ?>
             <button class="icon-button"><i class="fas fa-ellipsis-v"></i></button>
         </div>
     </header>
 
     <!-- Main Content -->
     <main>
-        <?php if (!empty($cart_items)): ?>
+        <?php if (empty($cart_items)): ?>
+        <!-- Empty Cart State -->
+        <section class="empty-cart">
+            <div class="empty-cart-illustration">
+                <i class="fas fa-shopping-cart"></i>
+            </div>
+            <h2>Your cart is empty</h2>
+            <p>Looks like you haven't added any items to your cart yet.</p>
+            <button class="primary-button" onclick="window.location.href='businesses.php'">
+                <i class="fas fa-store"></i> Browse Businesses
+            </button>
+        </section>
+        <?php else: ?>
         <!-- Business Info -->
         <section class="cart-business">
             <div class="cart-business-info">
@@ -148,10 +161,15 @@ function calculateDeliveryFee($distance) {
                     <p class="cart-item-options"><?php echo htmlspecialchars($item['options']); ?></p>
                     <?php endif; ?>
                     <div class="cart-item-price">₱<?php echo number_format($item['price'], 2); ?></div>
+                    <div class="cart-item-subtotal">Subtotal: ₱<?php echo number_format($item['price'] * $item['quantity'], 2); ?></div>
                     <div class="cart-item-quantity">
-                        <button class="quantity-button small" onclick="updateQuantity(<?php echo $item['id']; ?>, -1)">-</button>
-                        <span><?php echo $item['quantity']; ?></span>
-                        <button class="quantity-button small" onclick="updateQuantity(<?php echo $item['id']; ?>, 1)">+</button>
+                        <button class="quantity-button small" onclick="updateQuantity(<?php echo $item['id']; ?>, -1)" <?php echo $item['quantity'] <= 1 ? 'disabled' : ''; ?>>
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <span id="quantity-<?php echo $item['id']; ?>"><?php echo $item['quantity']; ?></span>
+                        <button class="quantity-button small" onclick="updateQuantity(<?php echo $item['id']; ?>, 1)" <?php echo $item['quantity'] >= 10 ? 'disabled' : ''; ?>>
+                            <i class="fas fa-plus"></i>
+                        </button>
                     </div>
                 </div>
                 <button class="remove-item" onclick="removeItem(<?php echo $item['id']; ?>)"><i class="fas fa-trash"></i></button>
@@ -332,7 +350,7 @@ function calculateDeliveryFee($distance) {
                 </label>
             </div>
         </section>
-
+        
         <!-- Order Summary -->
         <section class="order-summary">
             <h3>Order Summary</h3>
@@ -362,18 +380,8 @@ function calculateDeliveryFee($distance) {
                 Proceed to Checkout
             </button>
         </div>
-        <?php else: ?>
-        <!-- Empty Cart State -->
-        <div class="empty-state">
-            <i class="fas fa-shopping-cart"></i>
-            <h3>Your Cart is Empty</h3>
-            <p>Browse businesses and add products to your cart.</p>
-            <button class="primary-button" onclick="location.href='businesses.php'" style="margin-top: 15px;">
-                <i class="fas fa-store"></i> Explore Businesses
-            </button>
-        </div>
         <?php endif; ?>
-    </main>
+        </main>
 
     <!-- Script for cart functionality -->
     <!-- Include location.js script -->

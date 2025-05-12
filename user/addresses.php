@@ -19,8 +19,8 @@ function getAddresses($pdo, $user_id) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if ($_POST['action'] === 'add') {
         // Add new address
-        $stmt = $pdo->prepare("INSERT INTO addresses (user_id, address_line1, address_line2, city, state, postal_code, is_default) 
-                              VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt = $pdo->prepare("INSERT INTO addresses (user_id, address, city, state, postal_code, latitude, longitude, is_default) 
+                              VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         $isDefault = isset($_POST['is_default']) ? 1 : 0;
         
         // If setting as default, update all other addresses to not be default
@@ -31,11 +31,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         
         $stmt->execute([
             $_SESSION['user_id'],
-            $_POST['address_line1'],
-            $_POST['address_line2'] ?? '',
+            $_POST['address_line1'], // Using address_line1 as the main address field
             $_POST['city'],
             $_POST['state'],
             $_POST['postal_code'],
+            $_POST['latitude'] ?? null,
+            $_POST['longitude'] ?? null,
             $isDefault
         ]);
         
@@ -193,14 +194,13 @@ $addresses = getAddresses($pdo, $_SESSION['user_id']);
                 <input type="hidden" name="action" value="add">
                 
                 <div class="form-row">
-                    <label for="address_line1">Address Line 1</label>
+                    <label for="address_line1">Address</label>
                     <input type="text" id="address_line1" name="address_line1" required>
                 </div>
                 
-                <div class="form-row">
-                    <label for="address_line2">Address Line 2 (Optional)</label>
-                    <input type="text" id="address_line2" name="address_line2">
-                </div>
+                <!-- Hidden fields for coordinates -->
+                <input type="hidden" id="latitude" name="latitude">
+                <input type="hidden" id="longitude" name="longitude">
                 
                 <div class="form-row">
                     <label for="city">City</label>
@@ -246,10 +246,7 @@ $addresses = getAddresses($pdo, $_SESSION['user_id']);
                         <?php endif; ?>
                         
                         <div class="address-content">
-                            <p><?php echo htmlspecialchars($address['address_line1']); ?></p>
-                            <?php if (!empty($address['address_line2'])): ?>
-                                <p><?php echo htmlspecialchars($address['address_line2']); ?></p>
-                            <?php endif; ?>
+                            <p><?php echo htmlspecialchars($address['address']); ?></p>
                             <p>
                                 <?php echo htmlspecialchars($address['city']); ?>, 
                                 <?php echo htmlspecialchars($address['state']); ?> 
@@ -303,10 +300,90 @@ $addresses = getAddresses($pdo, $_SESSION['user_id']);
     </nav>
 
     <script>
+        // Function to toggle address form visibility
         function toggleAddressForm() {
             const form = document.getElementById('address-form');
             form.style.display = form.style.display === 'none' ? 'block' : 'none';
+            
+            // Scroll to the form if it's being shown
+            if (form.style.display === 'block') {
+                form.scrollIntoView({ behavior: 'smooth' });
+            }
         }
+        
+        // Function to get URL parameters
+        function getUrlParams() {
+            const params = {};
+            const queryString = window.location.search.substring(1);
+            const pairs = queryString.split('&');
+            
+            for (const pair of pairs) {
+                if (pair === '') continue;
+                const parts = pair.split('=');
+                params[decodeURIComponent(parts[0])] = decodeURIComponent(parts[1] || '');
+            }
+            
+            return params;
+        }
+        
+        // Function to fill the address form with URL parameters
+        function fillAddressFormFromUrl() {
+            const params = getUrlParams();
+            const hashFragment = window.location.hash;
+            
+            // Check if we have address parameters and the add-address hash
+            if (params.address && hashFragment === '#add-address') {
+                // Show the form
+                toggleAddressForm();
+                
+                // Fill in the form fields
+                if (params.address) {
+                    document.getElementById('address_line1').value = params.address;
+                }
+                
+                if (params.city) {
+                    document.getElementById('city').value = params.city;
+                }
+                
+                if (params.state) {
+                    document.getElementById('state').value = params.state;
+                }
+                
+                if (params.postal_code) {
+                    document.getElementById('postal_code').value = params.postal_code;
+                }
+                
+                // Store latitude and longitude in hidden fields if available
+                if (params.latitude && params.longitude) {
+                    // Create hidden fields if they don't exist
+                    let latField = document.getElementById('latitude');
+                    if (!latField) {
+                        latField = document.createElement('input');
+                        latField.type = 'hidden';
+                        latField.id = 'latitude';
+                        latField.name = 'latitude';
+                        document.querySelector('form').appendChild(latField);
+                    }
+                    latField.value = params.latitude;
+                    
+                    let lngField = document.getElementById('longitude');
+                    if (!lngField) {
+                        lngField = document.createElement('input');
+                        lngField.type = 'hidden';
+                        lngField.id = 'longitude';
+                        lngField.name = 'longitude';
+                        document.querySelector('form').appendChild(lngField);
+                    }
+                    lngField.value = params.longitude;
+                }
+                
+                // Check the default checkbox
+                document.getElementById('is_default').checked = true;
+            }
+        }
+        
+        // Run when the page loads
+        document.addEventListener('DOMContentLoaded', fillAddressFormFromUrl);
     </script>
 </body>
 </html>

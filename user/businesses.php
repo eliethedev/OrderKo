@@ -32,15 +32,19 @@ $businesses = $stmt->fetchAll();
 
 // Function to get all available products with business information
 function getAllAvailableProducts($pdo, $limit = 20) {
-    $query = "SELECT p.*, b.name as business_name, b.image_url as business_image, b.verification_status,
+    // Get user coordinates from session or use default Manila coordinates
+    $user_latitude = isset($_SESSION['user_latitude']) ? $_SESSION['user_latitude'] : 14.5995;
+    $user_longitude = isset($_SESSION['user_longitude']) ? $_SESSION['user_longitude'] : 120.9842;
+    
+    $query = "SELECT p.*, b.name as business_name, b.category as business_category, b.image_url as business_image, b.verification_status,
               CASE 
                 WHEN b.latitude IS NOT NULL AND b.longitude IS NOT NULL THEN 
                     ROUND((
                         6371 * acos(
-                            cos(radians(12.8797)) * 
+                            cos(radians(?)) * 
                             cos(radians(b.latitude)) * 
-                            cos(radians(b.longitude) - radians(121.7740)) + 
-                            sin(radians(12.8797)) * 
+                            cos(radians(b.longitude) - radians(?)) + 
+                            sin(radians(?)) * 
                             sin(radians(b.latitude))
                         )
                     ), 1)
@@ -48,11 +52,15 @@ function getAllAvailableProducts($pdo, $limit = 20) {
               END as distance
               FROM products p
               JOIN businesses b ON p.business_id = b.id
+              WHERE p.is_available = 1
               ORDER BY p.created_at DESC
               LIMIT ?";
     
     $stmt = $pdo->prepare($query);
-    $stmt->bindParam(1, $limit, PDO::PARAM_INT);
+    $stmt->bindParam(1, $user_latitude, PDO::PARAM_STR);
+    $stmt->bindParam(2, $user_longitude, PDO::PARAM_STR);
+    $stmt->bindParam(3, $user_latitude, PDO::PARAM_STR);
+    $stmt->bindParam(4, $limit, PDO::PARAM_INT);
     $stmt->execute();
     return $stmt->fetchAll();
 }
@@ -98,6 +106,34 @@ foreach ($products as $product) {
     <link rel="stylesheet" href="src/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* Toast Notification */
+        .toast-notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background-color: #28a745;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            font-weight: 500;
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            text-align: center;
+            max-width: 90%;
+        }
+        
+        .toast-notification.error {
+            background-color: #dc3545;
+        }
+        
+        .toast-notification.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+        
         .business-list-item {
             display: flex;
             background-color: var(--color-card);
@@ -214,31 +250,54 @@ foreach ($products as $product) {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 15px;
+            padding-bottom: 20px;
         }
         
         .product-card {
             background-color: var(--color-card);
-            border-radius: var(--border-radius);
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: var(--shadow-sm);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
         }
         
         .product-card:hover {
             transform: translateY(-3px);
-            box-shadow: var(--shadow-md);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .product-card-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(0,0,0,0.6);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            z-index: 2;
         }
         
         .product-card-image {
-            height: 180px;
+            height: 160px;
             background-size: cover;
             background-position: center;
             background-color: var(--color-border);
+            position: relative;
         }
         
         .product-card-info {
             padding: 12px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
         }
         
         .product-card-name {
@@ -247,6 +306,7 @@ foreach ($products as $product) {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            padding-right: 30px; /* Space for add to cart button */
         }
         
         .product-card-price {
@@ -258,9 +318,10 @@ foreach ($products as $product) {
         
         .product-card-business {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             padding-top: 10px;
             border-top: 1px solid var(--color-border);
+            margin-top: auto;
         }
         
         .business-mini-image {
@@ -271,10 +332,12 @@ foreach ($products as $product) {
             background-position: center;
             margin-right: 8px;
             border: 1px solid var(--color-border);
+            flex-shrink: 0;
         }
         
         .business-mini-info {
             flex: 1;
+            min-width: 0; /* Helps with text overflow */
         }
         
         .business-mini-name {
@@ -283,18 +346,58 @@ foreach ($products as $product) {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            margin-bottom: 3px;
+        }
+        
+        .business-mini-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 0.7rem;
+            color: var(--color-text-light);
         }
         
         .business-mini-distance {
-            font-size: 0.75rem;
-            color: var(--color-text-light);
             display: flex;
             align-items: center;
             gap: 3px;
         }
         
         .business-mini-verification {
-            margin-left: 5px;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+        
+        .business-mini-verification i.verified {
+            color: #28a745;
+        }
+        
+        .business-mini-verification i.pending {
+            color: #ffc107;
+        }
+        
+        .add-to-cart-mini {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--color-primary);
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .add-to-cart-mini:hover {
+            background-color: #c0392b;
+            transform: scale(1.1);
         }
         
         .business-products {
@@ -408,6 +511,7 @@ foreach ($products as $product) {
         <div class="header-container">
             <button class="back-button" onclick="history.back()"><i class="fas fa-arrow-left"></i></button>
             <h1>Explore Businesses</h1>
+            <?php include_once 'includes/cart_icon.php'; ?>
             <button class="icon-button"><i class="fas fa-search"></i></button>
         </div>
         <div class="location-bar">
@@ -505,7 +609,10 @@ foreach ($products as $product) {
                 <?php else: ?>
                 <div class="products-grid">
                     <?php foreach ($products as $product): ?>
-                    <div class="product-card" onclick="location.href='product-detail.php?id=<?php echo $product['id']; ?>'">
+                    <div class="product-card" onclick="openProductModal(<?php echo $product['id']; ?>)">
+                        <div class="product-card-badge">
+                            <span><?php echo htmlspecialchars($product['business_category'] ?: 'Product'); ?></span>
+                        </div>
                         <div class="product-card-image" style="background-image: url('../<?php echo htmlspecialchars($product['image_url'] ?: 'assets/images/default-product.jpg'); ?>')"></div>
                         <div class="product-card-info">
                             <h4 class="product-card-name"><?php echo htmlspecialchars($product['name']); ?></h4>
@@ -514,14 +621,20 @@ foreach ($products as $product) {
                                 <div class="business-mini-image" style="background-image: url('../<?php echo htmlspecialchars($product['business_image'] ?: 'assets/images/default-business.jpg'); ?>')"></div>
                                 <div class="business-mini-info">
                                     <div class="business-mini-name"><?php echo htmlspecialchars($product['business_name']); ?></div>
-                                    <?php if (isset($product['distance']) && $product['distance'] !== null): ?>
-                                    <div class="business-mini-distance"><i class="fas fa-map-marker-alt"></i> <?php echo $product['distance']; ?> km</div>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="business-mini-verification">
-                                    <i class="fas fa-check-circle <?php echo $product['verification_status'] === 'verified' ? 'verified' : 'pending'; ?>"></i>
+                                    <div class="business-mini-meta">
+                                        <?php if (isset($product['distance']) && $product['distance'] !== null): ?>
+                                        <span class="business-mini-distance"><i class="fas fa-map-marker-alt"></i> <?php echo $product['distance']; ?> km</span>
+                                        <?php endif; ?>
+                                        <span class="business-mini-verification">
+                                            <i class="fas fa-check-circle <?php echo $product['verification_status'] === 'verified' ? 'verified' : 'pending'; ?>"></i>
+                                            <?php echo $product['verification_status'] === 'verified' ? 'Verified' : 'Pending'; ?>
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
+                            <button class="add-to-cart-mini" data-product-id="<?php echo $product['id']; ?>" onclick="event.stopPropagation(); addToCart(<?php echo $product['id']; ?>, 1)">
+                                <i class="fas fa-cart-plus"></i>
+                            </button>
                         </div>
                     </div>
                     <?php endforeach; ?>
@@ -552,6 +665,7 @@ foreach ($products as $product) {
     </nav>
 
     <script src="js/script.js"></script>
+    <script src="src/location.js"></script>
     <script>
         // Function to toggle between business and product views
         function showView(viewType) {
@@ -571,6 +685,84 @@ foreach ($products as $product) {
                 viewButtons[0].classList.remove('active');
                 viewButtons[1].classList.add('active');
             }
+            
+            // Save the current view preference
+            localStorage.setItem('orderko_view_preference', viewType);
+        }
+        
+        // Function to open product modal
+        function openProductModal(productId) {
+            // Fetch product details via AJAX
+            fetch(`get_product.php?id=${productId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Redirect to business detail page with product modal
+                        window.location.href = `business-detail.php?id=${data.product.business_id}&product_id=${productId}`;
+                    } else {
+                        alert('Could not load product details.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching product:', error);
+                    alert('An error occurred while loading the product.');
+                });
+        }
+        
+        // Function to add product to cart
+        function addToCart(productId, quantity) {
+            // Create form data
+            const formData = new FormData();
+            formData.append('product_id', productId);
+            formData.append('quantity', quantity);
+            
+            // Send AJAX request
+            fetch('add_to_cart.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    showToast('Product added to cart!');
+                    
+                    // Update cart count if available
+                    if (document.querySelector('.cart-count')) {
+                        document.querySelector('.cart-count').textContent = data.cart_count;
+                    }
+                } else {
+                    // Show error message
+                    showToast(data.message || 'Failed to add product to cart', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error adding to cart:', error);
+                showToast('An error occurred. Please try again.', 'error');
+            });
+        }
+        
+        // Function to show toast notification
+        function showToast(message, type = 'success') {
+            // Create toast element if it doesn't exist
+            let toast = document.getElementById('toast-notification');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'toast-notification';
+                document.body.appendChild(toast);
+            }
+            
+            // Set toast content and class
+            toast.textContent = message;
+            toast.className = `toast-notification ${type}`;
+            
+            // Show the toast
+            toast.classList.add('show');
+            
+            // Hide after 3 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
         }
         
         // Initialize filter buttons
@@ -589,6 +781,28 @@ foreach ($products as $product) {
                     // For now, we're just updating the UI
                 });
             });
+            
+            // Check for saved view preference
+            const savedView = localStorage.getItem('orderko_view_preference');
+            if (savedView) {
+                showView(savedView);
+            }
+            
+            // Initialize user location
+            getUserLocation()
+                .then(location => {
+                    // Update location display
+                    const locationBar = document.querySelector('.location-bar span');
+                    if (locationBar && location.address) {
+                        locationBar.textContent = location.address.split(',')[0] || 'Current Location';
+                    }
+                    
+                    // Save location to session
+                    saveUserLocation(location);
+                })
+                .catch(error => {
+                    console.error('Error getting location:', error);
+                });
         });
     </script>
 </body>

@@ -22,6 +22,37 @@ function getBusinessProducts($pdo, $business_id) {
     return $stmt->fetchAll();
 }
 
+// Function to get orders for a business
+function getBusinessOrders($pdo, $business_id, $status = null) {
+    $sql = "SELECT o.*, u.full_name as customer_name, u.phone_number as customer_phone 
+           FROM orders o 
+           LEFT JOIN users u ON o.customer_id = u.id 
+           WHERE o.business_id = ?";
+    
+    $params = [$business_id];
+    
+    if ($status) {
+        $sql .= " AND o.status = ?";
+        $params[] = $status;
+    }
+    
+    $sql .= " ORDER BY o.created_at DESC";
+    
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+
+// Function to get order items for an order
+function getOrderItems($pdo, $order_id) {
+    $stmt = $pdo->prepare("SELECT oi.*, p.name, p.price 
+                           FROM order_items oi 
+                           JOIN products p ON oi.product_id = p.id 
+                           WHERE oi.order_id = ?");
+    $stmt->execute([$order_id]);
+    return $stmt->fetchAll();
+}
+
 // Function to get categories
 function getCategories($pdo) {
     $stmt = $pdo->prepare("SELECT * FROM categories ORDER BY name ASC");
@@ -215,6 +246,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         header('Location: my-businesses.php?view_business=' . $_POST['business_id']);
         exit;
     }
+    
+    // Update order status
+    elseif ($_POST['action'] === 'update_order_status' && isset($_POST['order_id']) && isset($_POST['status']) && isset($_POST['business_id'])) {
+        // Verify that the order belongs to this business
+        $stmt = $pdo->prepare("SELECT * FROM orders WHERE id = ? AND business_id = ?");
+        $stmt->execute([$_POST['order_id'], $_POST['business_id']]);
+        $order = $stmt->fetch();
+        
+        if ($order) {
+            // Update order status
+            $new_status = trim($_POST['status']);
+            
+            // Log the status value for debugging
+            error_log("Updating order #{$_POST['order_id']} status to: '{$new_status}'");
+            
+            $stmt = $pdo->prepare("UPDATE orders SET status = ?, updated_at = NOW() WHERE id = ?");
+            $result = $stmt->execute([$new_status, $_POST['order_id']]);
+            
+            if (!$result) {
+                // Log error if update fails
+                error_log("Failed to update order status: " . print_r($stmt->errorInfo(), true));
+            }
+            
+            // Verify the update was successful
+            $verify = $pdo->prepare("SELECT status FROM orders WHERE id = ?");
+            $verify->execute([$_POST['order_id']]);
+            $updated_order = $verify->fetch();
+            error_log("After update, order #{$_POST['order_id']} status is: '{$updated_order['status']}'");
+            
+            // Add notification for the customer (if you have a notifications table)
+            try {
+                $stmt = $pdo->prepare("INSERT INTO notifications (user_id, title, message, type, related_id, created_at) 
+                                   VALUES (?, ?, ?, 'order', ?, NOW())");
+                $title = "Order Status Update";
+                $message = "Your order #" . $_POST['order_id'] . " has been updated to " . ucfirst($_POST['status']);
+                $stmt->execute([$order['customer_id'], $title, $message, $_POST['order_id']]);
+            } catch (Exception $e) {
+                // Notifications table might not exist, just continue
+            }
+        }
+        
+        // Clear any output buffer to ensure headers work correctly
+        if (ob_get_length()) ob_clean();
+        
+        // Redirect with a cache-busting parameter to force a fresh page load
+        header('Location: my-businesses.php?view_business=' . $_POST['business_id'] . '&tab=orders&refresh=' . time());
+        exit;
+    }
+    
+    // Send order notification
+    elseif ($_POST['action'] === 'send_notification' && isset($_POST['order_id']) && isset($_POST['message']) && isset($_POST['business_id'])) {
+        // Verify that the order belongs to this business
+        $stmt = $pdo->prepare("SELECT * FROM orders WHERE id = ? AND business_id = ?");
+        $stmt->execute([$_POST['order_id'], $_POST['business_id']]);
+        $order = $stmt->fetch();
+        
+        if ($order) {
+            // Add notification for the customer
+            try {
+                $stmt = $pdo->prepare("INSERT INTO notifications (user_id, title, message, type, related_id, created_at) 
+                                   VALUES (?, ?, ?, 'order', ?, NOW())");
+                $title = "Message from Business";
+                $stmt->execute([$order['customer_id'], $title, $_POST['message'], $_POST['order_id']]);
+            } catch (Exception $e) {
+                // Notifications table might not exist, just continue
+            }
+        }
+        
+        header('Location: my-businesses.php?view_business=' . $_POST['business_id'] . '&tab=orders');
+        exit;
+    }
 }
 
 // Fetch user's businesses
@@ -226,6 +328,9 @@ $categories = getCategories($pdo);
 // Check if viewing a specific business
 $view_business = null;
 $business_products = [];
+$business_orders = [];
+$active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'products';
+
 if (isset($_GET['view_business'])) {
     $business_id = $_GET['view_business'];
     
@@ -237,9 +342,13 @@ if (isset($_GET['view_business'])) {
         }
     }
     
-    // Fetch products for this business
+    // Fetch data for this business
     if ($view_business) {
+        // Fetch products
         $business_products = getBusinessProducts($pdo, $business_id);
+        
+        // Fetch orders
+        $business_orders = getBusinessOrders($pdo, $business_id);
     }
 }
 ?>
@@ -530,6 +639,205 @@ if (isset($_GET['view_business'])) {
             color: white;
         }
         
+        /* Orders Dashboard Styles */
+        .order-filter {
+            display: flex;
+            align-items: center;
+        }
+        
+        .order-filter select {
+            padding: 8px 12px;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--color-border);
+            background-color: white;
+        }
+        
+        .orders-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .order-card {
+            background-color: var(--color-card);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 15px;
+        }
+        
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            border-bottom: 1px solid var(--color-border);
+            background-color: #f9f9f9;
+        }
+        
+        .order-info {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .order-id {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .order-date {
+            font-size: 0.8rem;
+            color: var(--color-text-light);
+        }
+        
+        .order-status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-align: center;
+            margin-top: 5px;
+        }
+        
+        .order-status-badge.pending {
+            background-color: #f0f0f0;
+            color: #666;
+        }
+        
+        .order-status-badge.confirmed {
+            background-color: var(--color-primary);
+            color: white;
+        }
+        
+        .order-status-badge.preparing {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .order-status-badge.ready {
+            background-color: #2ecc71;
+            color: white;
+        }
+        
+        .order-status-badge.completed {
+            background-color: #27ae60;
+            color: white;
+        }
+        
+        .order-status-badge.cancelled {
+            background-color: #e74c3c;
+            color: white;
+        }
+        
+        .customer-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+        }
+        
+        .customer-name, .customer-phone {
+            font-size: 0.9rem;
+        }
+        
+        .customer-name i, .customer-phone i {
+            margin-right: 5px;
+            color: var(--color-text-light);
+        }
+        
+        .order-details {
+            padding: 15px;
+        }
+        
+        .order-details h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+        
+        .order-items-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .order-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        
+        .item-quantity {
+            font-weight: 500;
+            margin-right: 10px;
+            min-width: 30px;
+        }
+        
+        .item-name {
+            flex: 1;
+        }
+        
+        .item-price {
+            font-weight: 500;
+            color: var(--color-primary);
+        }
+        
+        .order-total {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+        
+        .total-amount {
+            color: var(--color-primary);
+            font-size: 1.1rem;
+        }
+        
+        .order-notes {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #fff9e6;
+            border-radius: 5px;
+            border-left: 3px solid var(--color-primary);
+        }
+        
+        .order-pickup {
+            margin-bottom: 15px;
+        }
+        
+        .order-pickup p {
+            margin: 5px 0;
+        }
+        
+        .order-pickup i {
+            margin-right: 5px;
+            color: var(--color-text-light);
+        }
+        
+        .order-actions {
+            display: flex;
+            gap: 10px;
+            padding: 15px;
+            border-top: 1px solid var(--color-border);
+            background-color: #f9f9f9;
+        }
+        
+        .order-actions form {
+            flex: 1;
+        }
+        
+        .order-actions button {
+            width: 100%;
+        }
+        
         .tabs {
             display: flex;
             margin-bottom: 20px;
@@ -697,12 +1005,12 @@ if (isset($_GET['view_business'])) {
             
             <!-- Tabs for Products and Orders -->
             <div class="tabs">
-                <div class="tab active" onclick="showTab('products')">Products</div>
-                <div class="tab" onclick="showTab('orders')">Orders</div>
+                <div class="tab <?php echo $active_tab == 'products' ? 'active' : ''; ?>" onclick="showTab('products')">Products</div>
+                <div class="tab <?php echo $active_tab == 'orders' ? 'active' : ''; ?>" onclick="showTab('orders')">Orders</div>
             </div>
             
             <!-- Products Tab -->
-            <div id="products-tab">
+            <div id="products-tab" style="<?php echo $active_tab == 'products' ? 'display: block;' : 'display: none;'; ?>">
                 <div class="section-header">
                     <h3>Products</h3>
                     <button class="secondary-button small" onclick="toggleProductForm()">
@@ -797,16 +1105,212 @@ if (isset($_GET['view_business'])) {
                 <?php endif; ?>
             </div>
             
-            <!-- Orders Tab (Hidden by default) -->
-            <div id="orders-tab" style="display: none;">
+            <!-- Orders Tab -->
+            <div id="orders-tab" style="<?php echo $active_tab == 'orders' ? 'display: block;' : 'display: none;'; ?>">
                 <div class="section-header">
-                    <h3>Recent Orders</h3>
+                    <h3>Orders Dashboard</h3>
+                    <div class="order-filter">
+                        <select id="order-status-filter" onchange="filterOrders(this.value)">
+                            <option value="all">All Orders</option>
+                            <option value="pending">Pending</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="preparing">Preparing</option>
+                            <option value="ready">Ready</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
                 </div>
                 
+                <?php if (empty($business_orders)): ?>
                 <div class="empty-state">
                     <i class="fas fa-shopping-bag"></i>
                     <h3>No Orders Yet</h3>
                     <p>Orders from customers will appear here.</p>
+                </div>
+                <?php else: ?>
+                <div class="orders-list">
+                    <?php foreach ($business_orders as $order): ?>
+                    <?php 
+                    // Ensure status is a valid string
+                    $status = isset($order['status']) ? trim($order['status']) : '';
+                    ?>
+                    <div class="order-card" data-status="<?php echo htmlspecialchars($status); ?>">
+                        <div class="order-header">
+                            <div class="order-info">
+                                <div class="order-id">
+                                    <strong>Order #<?php echo $order['id']; ?></strong>
+                                    <span class="order-date"><?php echo date('M j, Y, g:i A', strtotime($order['created_at'])); ?></span>
+                                </div>
+                                <div class="order-status-badge <?php echo htmlspecialchars($status); ?>">
+                                    <?php echo ucfirst(htmlspecialchars($status ?: 'unknown')); ?>
+                                </div>
+                            </div>
+                            <div class="customer-info">
+                                <div class="customer-name">
+                                    <i class="fas fa-user"></i> <?php echo htmlspecialchars($order['customer_name'] ?? 'Customer'); ?>
+                                </div>
+                                <?php if (!empty($order['customer_phone'])): ?>
+                                <div class="customer-phone">
+                                    <i class="fas fa-phone"></i> <?php echo htmlspecialchars($order['customer_phone']); ?>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        
+                        <div class="order-details">
+                            <h4>Order Items</h4>
+                            <div class="order-items-list">
+                                <?php 
+                                $items = getOrderItems($pdo, $order['id']);
+                                $total = 0;
+                                foreach ($items as $item): 
+                                    $total += $item['price'] * $item['quantity'];
+                                ?>
+                                <div class="order-item">
+                                    <div class="item-quantity"><?php echo $item['quantity']; ?> ×</div>
+                                    <div class="item-name"><?php echo htmlspecialchars($item['name']); ?></div>
+                                    <div class="item-price">₱<?php echo number_format($item['price'], 2); ?></div>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                            
+                            <div class="order-total">
+                                <span>Total:</span>
+                                <span class="total-amount">₱<?php echo number_format($total, 2); ?></span>
+                            </div>
+                            
+                            <?php if (!empty($order['special_instructions'])): ?>
+                            <div class="order-notes">
+                                <h4>Special Instructions</h4>
+                                <p><?php echo htmlspecialchars($order['special_instructions']); ?></p>
+                            </div>
+                            <?php endif; ?>
+                            
+                            <div class="order-pickup">
+                                <h4>Pickup Details</h4>
+                                <p><i class="fas fa-calendar-alt"></i> <?php echo date('l, F j, Y, g:i A', strtotime($order['pickup_date'])); ?></p>
+                            </div>
+                        </div>
+                        
+                        <div class="order-actions">
+                            <?php 
+                            // Debug information for troubleshooting
+                            error_log("Order #{$order['id']} status: '{$status}'");
+                            
+                            // Show appropriate action buttons based on status
+                            if ($status == 'pending'): 
+                            ?>
+                            <form method="POST" action="my-businesses.php">
+                                <input type="hidden" name="action" value="update_order_status">
+                                <input type="hidden" name="order_id" value="<?php echo $order['id']; ?>">
+                                <input type="hidden" name="business_id" value="<?php echo $view_business['id']; ?>">
+                                <input type="hidden" name="status" value="confirmed">
+                                <button type="submit" class="primary-button"><i class="fas fa-check"></i> Confirm Order</button>
+                            </form>
+                            <?php elseif ($status == 'confirmed'): ?>
+                            <form method="POST" action="my-businesses.php">
+                                <input type="hidden" name="action" value="update_order_status">
+                                <input type="hidden" name="order_id" value="<?php echo $order['id']; ?>">
+                                <input type="hidden" name="business_id" value="<?php echo $view_business['id']; ?>">
+                                <input type="hidden" name="status" value="preparing">
+                                <button type="submit" class="primary-button"><i class="fas fa-utensils"></i> Start Preparing</button>
+                            </form>
+                            <?php elseif ($status == 'preparing'): ?>
+                            <form method="POST" action="my-businesses.php">
+                                <input type="hidden" name="action" value="update_order_status">
+                                <input type="hidden" name="order_id" value="<?php echo $order['id']; ?>">
+                                <input type="hidden" name="business_id" value="<?php echo $view_business['id']; ?>">
+                                <input type="hidden" name="status" value="ready">
+                                <button type="submit" class="primary-button"><i class="fas fa-box"></i> Mark as Ready</button>
+                            </form>
+                            <?php elseif ($status == 'ready'): ?>
+                            <?php 
+                            // Check if this is a delivery order or pickup order
+                            $deliveryCheck = $pdo->prepare("SELECT delivery_option FROM orders WHERE id = ?");
+                            $deliveryCheck->execute([$order['id']]);
+                            $deliveryOption = $deliveryCheck->fetchColumn();
+                            
+                            if ($deliveryOption == 'delivery'): // Show delivery option only for delivery orders
+                            ?>
+                            <form method="POST" action="my-businesses.php">
+                                <input type="hidden" name="action" value="update_order_status">
+                                <input type="hidden" name="order_id" value="<?php echo $order['id']; ?>">
+                                <input type="hidden" name="business_id" value="<?php echo $view_business['id']; ?>">
+                                <input type="hidden" name="status" value="on_delivery">
+                                <button type="submit" class="primary-button"><i class="fas fa-shipping-fast"></i> Mark as On Delivery</button>
+                            </form>
+                            <?php else: // For pickup orders, go straight to completed ?>
+                            <form method="POST" action="my-businesses.php">
+                                <input type="hidden" name="action" value="update_order_status">
+                                <input type="hidden" name="order_id" value="<?php echo $order['id']; ?>">
+                                <input type="hidden" name="business_id" value="<?php echo $view_business['id']; ?>">
+                                <input type="hidden" name="status" value="completed">
+                                <button type="submit" class="primary-button"><i class="fas fa-check-circle"></i> Complete Order</button>
+                            </form>
+                            <?php endif; ?>
+                            <?php elseif ($status == 'on_delivery'): ?>
+                            <form method="POST" action="my-businesses.php">
+                                <input type="hidden" name="action" value="update_order_status">
+                                <input type="hidden" name="order_id" value="<?php echo $order['id']; ?>">
+                                <input type="hidden" name="business_id" value="<?php echo $view_business['id']; ?>">
+                                <input type="hidden" name="status" value="completed">
+                                <button type="submit" class="primary-button"><i class="fas fa-check-circle"></i> Complete Order</button>
+                            </form>
+                            <?php else: ?>
+                            <!-- If status is empty or unknown, provide a way to fix it -->
+                            <form method="POST" action="my-businesses.php">
+                                <input type="hidden" name="action" value="update_order_status">
+                                <input type="hidden" name="order_id" value="<?php echo $order['id']; ?>">
+                                <input type="hidden" name="business_id" value="<?php echo $view_business['id']; ?>">
+                                <input type="hidden" name="status" value="pending">
+                                <button type="submit" class="primary-button"><i class="fas fa-sync"></i> Reset Order Status</button>
+                            </form>
+                            <?php endif; ?>
+                            
+                            <?php if (!in_array($status, ['cancelled', 'completed'])): ?>
+                            <button class="secondary-button" onclick="openNotificationModal(<?php echo $order['id']; ?>)"><i class="fas fa-bell"></i> Send Notification</button>
+                            <?php endif; ?>
+                            
+                            <?php if (!in_array($status, ['cancelled', 'completed'])): ?>
+                            <form method="POST" action="my-businesses.php">
+                                <input type="hidden" name="action" value="update_order_status">
+                                <input type="hidden" name="order_id" value="<?php echo $order['id']; ?>">
+                                <input type="hidden" name="business_id" value="<?php echo $view_business['id']; ?>">
+                                <input type="hidden" name="status" value="cancelled">
+                                <button type="submit" class="secondary-button danger"><i class="fas fa-times-circle"></i> Cancel Order</button>
+                            </form>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+            
+            <!-- Notification Modal -->
+            <div id="notification-modal" class="modal">
+                <div class="modal-content">
+                    <span class="close-modal" onclick="closeNotificationModal()">&times;</span>
+                    <div class="modal-header">
+                        <h3>Send Notification to Customer</h3>
+                    </div>
+                    <div class="modal-body">
+                        <form method="POST" action="my-businesses.php" id="notification-form">
+                            <input type="hidden" name="action" value="send_notification">
+                            <input type="hidden" name="order_id" id="notification-order-id" value="">
+                            <input type="hidden" name="business_id" value="<?php echo $view_business['id']; ?>">
+                            
+                            <div class="form-row">
+                                <label for="notification-message">Message</label>
+                                <textarea id="notification-message" name="message" rows="4" required placeholder="Enter a message for the customer..."></textarea>
+                            </div>
+                            
+                            <div class="form-row">
+                                <button type="submit" class="primary-button full-width">Send Notification</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
             
@@ -1000,6 +1504,13 @@ if (isset($_GET['view_business'])) {
             if (viewMapContainer) {
                 initViewMap(viewMapContainer);
             }
+            
+            // Check URL parameters for active tab
+            const urlParams = new URLSearchParams(window.location.search);
+            const tab = urlParams.get('tab');
+            if (tab) {
+                showTab(tab);
+            }
         });
         
         function toggleBusinessForm() {
@@ -1035,6 +1546,37 @@ if (isset($_GET['view_business'])) {
             } else {
                 tabs[1].classList.add('active');
             }
+            
+            // Update URL without refreshing the page
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', tabName);
+            window.history.pushState({}, '', url);
+        }
+        
+        // Filter orders by status
+        function filterOrders(status) {
+            const orderCards = document.querySelectorAll('.order-card');
+            
+            orderCards.forEach(card => {
+                if (status === 'all' || card.dataset.status === status) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+        
+        // Notification modal functions
+        function openNotificationModal(orderId) {
+            document.getElementById('notification-order-id').value = orderId;
+            document.getElementById('notification-modal').style.display = 'block';
+            document.body.style.overflow = 'hidden'; // Prevent scrolling
+        }
+        
+        function closeNotificationModal() {
+            document.getElementById('notification-modal').style.display = 'none';
+            document.body.style.overflow = 'auto'; // Re-enable scrolling
+            document.getElementById('notification-message').value = '';
         }
         
         // Map functionality

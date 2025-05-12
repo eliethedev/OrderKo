@@ -18,6 +18,19 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    // Payment method selection
+    const paymentMethods = document.querySelectorAll('.payment-method');
+    if (paymentMethods.length > 0) {
+        paymentMethods.forEach(method => {
+            method.addEventListener('click', function() {
+                // Remove active class from all payment methods
+                paymentMethods.forEach(m => m.classList.remove('active'));
+                // Add active class to clicked payment method
+                this.classList.add('active');
+            });
+        });
+    }
 });
 
 // Open product modal
@@ -260,7 +273,7 @@ function updateCartTotal() {
 }
 
 // Show notification
-function showNotification(message) {
+function showNotification(message, isError = false) {
     // Create notification element
     const notification = document.createElement('div');
     notification.className = 'notification';
@@ -271,7 +284,7 @@ function showNotification(message) {
     notification.style.bottom = '100px';
     notification.style.left = '50%';
     notification.style.transform = 'translateX(-50%)';
-    notification.style.backgroundColor = 'var(--color-primary)';
+    notification.style.backgroundColor = isError ? 'var(--color-danger, #e74c3c)' : 'var(--color-primary)';
     notification.style.color = 'white';
     notification.style.padding = '10px 20px';
     notification.style.borderRadius = 'var(--border-radius)';
@@ -295,4 +308,180 @@ function showNotification(message) {
             notification.remove();
         }, 300);
     }, 3000);
+}
+
+// Cancel Order Modal Functions
+function showCancelOrderModal(orderId) {
+    // Set the order ID to cancel
+    document.getElementById('order-id-to-cancel').value = orderId;
+    
+    // Show the modal
+    const modal = document.getElementById('cancel-order-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden'; // Prevent scrolling
+    }
+    
+    // Set up the reason dropdown change event
+    const reasonSelect = document.getElementById('cancel-reason');
+    if (reasonSelect) {
+        reasonSelect.addEventListener('change', function() {
+            const otherReasonContainer = document.getElementById('other-reason-container');
+            if (this.value === 'Other') {
+                otherReasonContainer.style.display = 'block';
+            } else {
+                otherReasonContainer.style.display = 'none';
+            }
+        });
+    }
+}
+
+function closeCancelOrderModal() {
+    const modal = document.getElementById('cancel-order-modal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto'; // Enable scrolling
+    }
+    
+    // Reset form
+    document.getElementById('cancel-reason').value = 'Changed my mind';
+    document.getElementById('other-reason').value = '';
+    document.getElementById('other-reason-container').style.display = 'none';
+}
+
+function cancelOrder() {
+    // Get order ID and reason
+    const orderId = document.getElementById('order-id-to-cancel').value;
+    let reason = document.getElementById('cancel-reason').value;
+    
+    // If reason is 'Other', get the text from the textarea
+    if (reason === 'Other') {
+        const otherReason = document.getElementById('other-reason').value.trim();
+        if (otherReason) {
+            reason = otherReason;
+        }
+    }
+    
+    // Show loading state
+    const confirmButton = document.querySelector('#cancel-order-modal .danger-button');
+    if (confirmButton) {
+        const originalText = confirmButton.textContent;
+        confirmButton.disabled = true;
+        confirmButton.textContent = 'Processing...';
+    }
+    
+    // Send cancellation request to server
+    fetch('api/cancel_order.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            order_id: orderId,
+            reason: reason
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success notification
+            showNotification('Order cancelled successfully');
+            
+            // Close modal
+            closeCancelOrderModal();
+            
+            // Reload page after a short delay
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            // Show error notification
+            showNotification('Error: ' + data.message, true);
+            
+            // Reset button
+            if (confirmButton) {
+                confirmButton.disabled = false;
+                confirmButton.textContent = originalText;
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error cancelling order. Please try again.', true);
+        
+        // Reset button
+        if (confirmButton) {
+            confirmButton.disabled = false;
+            confirmButton.textContent = originalText;
+        }
+    });
+}
+
+// Place Order function
+function placeOrder() {
+    // Show loading state
+    const orderButton = document.querySelector('.place-order-button-container button');
+    if (orderButton) {
+        const originalText = orderButton.innerHTML;
+        orderButton.disabled = true;
+        orderButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    }
+    
+    // Get selected payment method
+    const paymentMethod = document.querySelector('.payment-method.active')?.dataset.method || 'cash';
+    
+    // Get pickup details
+    const pickupDate = document.getElementById('pickup_date')?.textContent;
+    const pickupTime = document.getElementById('pickup_time')?.textContent;
+    
+    // Get order note
+    const orderNote = document.getElementById('order_note')?.value || '';
+    
+    // Prepare data
+    const orderData = {
+        payment_method: paymentMethod,
+        pickup_date: pickupDate,
+        pickup_time: pickupTime,
+        note: orderNote
+    };
+    
+    // Send order to server
+    fetch('api/process_order.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(orderData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success notification
+            showNotification('Order placed successfully!');
+            
+            // Redirect to orders page after a short delay
+            setTimeout(() => {
+                window.location.href = 'orders.php';
+            }, 1500);
+        } else {
+            // Show error notification
+            showNotification('Error: ' + data.message);
+            
+            // Reset button
+            if (orderButton) {
+                orderButton.disabled = false;
+                orderButton.innerHTML = originalText;
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error processing order. Please try again.');
+        
+        // Reset button
+        if (orderButton) {
+            orderButton.disabled = false;
+            orderButton.innerHTML = originalText;
+        }
+    });
 }

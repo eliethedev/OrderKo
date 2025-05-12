@@ -9,7 +9,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Get cart items
-$stmt = $pdo->prepare("SELECT ci.*, p.name, p.price, p.image_url, b.name as business_name, b.category, b.sub_category 
+$stmt = $pdo->prepare("SELECT ci.*, p.name, p.price, p.image_url, b.name as business_name, b.category 
                        FROM cart_items ci 
                        JOIN products p ON ci.product_id = p.id 
                        JOIN businesses b ON p.business_id = b.id 
@@ -69,15 +69,15 @@ $default_address = $stmt->fetch();
                     </div>
                 <?php else: ?>
                     <div class="address-details">
-                        <h4><?php echo htmlspecialchars($default_address['full_name']); ?></h4>
-                        <p><?php echo htmlspecialchars($default_address['street']); ?></p>
-                        <p><?php echo htmlspecialchars($default_address['city']); ?>, <?php echo htmlspecialchars($default_address['province']); ?></p>
+                        <h4><?php echo htmlspecialchars($user['full_name']); ?></h4>
+                        <p><?php echo htmlspecialchars($default_address['address']); ?></p>
+                        <p><?php echo htmlspecialchars($default_address['city']); ?>, <?php echo htmlspecialchars($default_address['state']); ?></p>
                         <p><?php echo htmlspecialchars($default_address['postal_code']); ?></p>
-                        <p><?php echo htmlspecialchars($default_address['phone']); ?></p>
+                        <p><?php echo htmlspecialchars($user['phone'] ?? ''); ?></p>
                     </div>
                     <div class="address-actions">
                         <button class="icon-button" onclick="location.href='addresses.php'">
-                            <i class="fas fa-edit"></i>
+                            <i class="fas fa-edit" style="color: green; font-size: 1.2rem;"></i>
                         </button>
                     </div>
                 <?php endif; ?>
@@ -175,6 +175,6 @@ $default_address = $stmt->fetch();
         </button>
     </div>
 
-    <script src="script.js"></script>
+    <script src="js/script.js"></script>
 </body>
 </html>
