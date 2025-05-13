@@ -16,6 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     $full_name = trim($_POST['full_name'] ?? '');
     $email = trim($_POST['email'] ?? '');
+    $phone_number = trim($_POST['phone_number'] ?? '');
     $current_password = trim($_POST['current_password'] ?? '');
     $new_password = trim($_POST['new_password'] ?? '');
     $confirm_password = trim($_POST['confirm_password'] ?? '');
@@ -28,6 +29,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = "Email is required";
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $errors[] = "Invalid email format";
+    }
+    
+    // Validate phone number (optional)
+    if (!empty($phone_number) && !preg_match('/^[0-9\+\-\s\(\)]{10,15}$/', $phone_number)) {
+        $errors[] = "Please enter a valid phone number";
     }
     
     if ($email !== $user['email']) {
@@ -61,9 +67,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("UPDATE users SET 
                 full_name = ?,
                 email = ?,
+                phone_number = ?,
                 updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?");
-            $stmt->execute([$full_name, $email, $_SESSION['user_id']]);
+            $stmt->execute([$full_name, $email, $phone_number, $_SESSION['user_id']]);
             
             if (!empty($new_password)) {
                 $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
@@ -127,11 +134,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         border-radius: 8px;
         padding: 0 15px;
         background-color: #fff;
+        position: relative;
+        min-height: 48px;
     }
     
     .input-wrapper i {
         color: #666;
         margin-right: 10px;
+        min-width: 20px;
+        text-align: center;
     }
     
     .input-wrapper input {
@@ -140,6 +151,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         border: none;
         outline: none;
         font-size: 16px;
+        margin-left: 5px;
+    }
+    
+    /* Password toggle icon */
+    .password-toggle {
+        cursor: pointer;
+        min-width: 20px;
+        margin-left: 10px;
+        color: #666;
     }
     
     .button-group {
@@ -248,6 +268,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <input type="email" id="email" name="email" 
                                    value="<?php echo htmlspecialchars($user['email'] ?? ''); ?>" 
                                    required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="phone_number">Phone Number (Optional)</label>
+                    <div class="input-group">
+                        <div class="input-wrapper">
+                            <i class="fas fa-phone"></i>
+                            <input type="tel" id="phone_number" name="phone_number" 
+                                   value="<?php echo htmlspecialchars($user['phone_number'] ?? ''); ?>" 
+                                   placeholder="Enter your phone number">
                         </div>
                     </div>
                 </div>

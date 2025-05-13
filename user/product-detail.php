@@ -530,7 +530,82 @@ $in_cart = $stmt->fetch() ? true : false;
             background-color: #28a745;
             color: white;
             padding: 12px 24px;
-            border-radius: 30px;
+            border-radius: 8px;
+        }
+        
+        /* Review Form Styles */
+        .review-form-container {
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .review-form-container h3 {
+            font-size: 18px;
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .rating-selector {
+            margin-bottom: 15px;
+        }
+        
+        .rating-selector p {
+            margin: 0 0 5px 0;
+            font-weight: 500;
+        }
+        
+        .star-rating {
+            display: flex;
+            gap: 5px;
+            font-size: 24px;
+            color: #ffc107;
+            cursor: pointer;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: inherit;
+            resize: vertical;
+        }
+        
+        .submit-review-btn {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .submit-review-btn:hover {
+            background-color: #c0392b;
+        }
+        
+        .no-reviews-message {
+            text-align: center;
+            padding: 20px;
+            color: #777;
+            font-style: italic;
+        }
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             z-index: 1000;
             font-weight: 500;
@@ -688,8 +763,33 @@ $in_cart = $stmt->fetch() ? true : false;
             <?php endif; ?>
             
             <!-- Reviews Section -->
-            <?php if (!empty($reviews)): ?>
             <h2 class="product-section-title"><i class="fas fa-star"></i> Reviews</h2>
+            
+            <!-- Review Submission Form -->
+            <div class="review-form-container">
+                <h3>Write a Review</h3>
+                <form id="review-form">
+                    <div class="rating-selector">
+                        <p>Your Rating:</p>
+                        <div class="star-rating">
+                            <i class="far fa-star" data-rating="1"></i>
+                            <i class="far fa-star" data-rating="2"></i>
+                            <i class="far fa-star" data-rating="3"></i>
+                            <i class="far fa-star" data-rating="4"></i>
+                            <i class="far fa-star" data-rating="5"></i>
+                        </div>
+                        <input type="hidden" id="rating-value" name="rating" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="review-comment">Your Review:</label>
+                        <textarea id="review-comment" name="comment" rows="4" placeholder="Share your experience with this product" required></textarea>
+                    </div>
+                    <button type="submit" class="submit-review-btn">Submit Review</button>
+                </form>
+            </div>
+            
+            <!-- Existing Reviews Section -->
+            <?php if (!empty($reviews)): ?>
             <div class="reviews-section">
                 <?php foreach ($reviews as $review): ?>
                 <div class="review-card">
@@ -718,6 +818,10 @@ $in_cart = $stmt->fetch() ? true : false;
                     View All Reviews
                 </div>
                 <?php endif; ?>
+            </div>
+            <?php else: ?>
+            <div class="no-reviews-message">
+                <p>No reviews yet. Be the first to review this product!</p>
             </div>
             <?php endif; ?>
         </div>
@@ -844,6 +948,95 @@ $in_cart = $stmt->fetch() ? true : false;
             .catch(error => {
                 console.error('Error getting location:', error);
             });
+            
+        // Initialize star rating system
+        const stars = document.querySelectorAll('.star-rating i');
+        const ratingInput = document.getElementById('rating-value');
+        
+        stars.forEach(star => {
+            star.addEventListener('mouseover', function() {
+                const rating = this.getAttribute('data-rating');
+                highlightStars(rating);
+            });
+            
+            star.addEventListener('mouseout', function() {
+                const currentRating = ratingInput.value;
+                highlightStars(currentRating);
+            });
+            
+            star.addEventListener('click', function() {
+                const rating = this.getAttribute('data-rating');
+                ratingInput.value = rating;
+                highlightStars(rating);
+            });
+        });
+        
+        function highlightStars(rating) {
+            stars.forEach(star => {
+                const starRating = star.getAttribute('data-rating');
+                if (starRating <= rating) {
+                    star.classList.remove('far');
+                    star.classList.add('fas');
+                } else {
+                    star.classList.remove('fas');
+                    star.classList.add('far');
+                }
+            });
+        }
+        
+        // Handle review form submission
+        const reviewForm = document.getElementById('review-form');
+        if (reviewForm) {
+            reviewForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const rating = document.getElementById('rating-value').value;
+                const comment = document.getElementById('review-comment').value;
+                
+                if (rating < 1) {
+                    showToast('Please select a rating', 'error');
+                    return;
+                }
+                
+                if (!comment.trim()) {
+                    showToast('Please enter a review comment', 'error');
+                    return;
+                }
+                
+                // Create form data
+                const formData = new FormData();
+                formData.append('product_id', productId);
+                formData.append('rating', rating);
+                formData.append('comment', comment);
+                
+                // Send AJAX request
+                fetch('submit_review.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast(data.message);
+                        // Reset form
+                        reviewForm.reset();
+                        ratingInput.value = 0;
+                        highlightStars(0);
+                        
+                        // Reload page to show the new review
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1500);
+                    } else {
+                        showToast(data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error submitting review:', error);
+                    showToast('An error occurred. Please try again.', 'error');
+                });
+            });
+        }
     });
     </script>
 </body>

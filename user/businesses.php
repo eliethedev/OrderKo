@@ -125,6 +125,281 @@ foreach ($products as $product) {
             max-width: 90%;
         }
         
+        /* Product Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            overflow-y: auto;
+        }
+        
+        .modal-content {
+            position: relative;
+            background-color: #fff;
+            margin: 10vh auto;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            max-height: 80vh;
+        }
+        
+        .modal-header {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
+        }
+        
+        .modal-close {
+            background-color: rgba(255, 255, 255, 0.8);
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        
+        .modal-body {
+            overflow-y: auto;
+        }
+        
+        .product-modal-image {
+            height: 220px;
+            background-size: cover;
+            background-position: center;
+            background-color: #f5f5f5;
+        }
+        
+        .product-modal-info {
+            padding: 20px;
+        }
+        
+        .product-modal-name {
+            font-size: 22px;
+            font-weight: 700;
+            margin: 0 0 5px 0;
+        }
+        
+        .product-modal-price {
+            font-size: 20px;
+            font-weight: 600;
+            color: #e74c3c;
+            margin-bottom: 15px;
+        }
+        
+        .product-modal-business {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            cursor: pointer;
+        }
+        
+        .product-modal-description {
+            margin-bottom: 20px;
+            line-height: 1.5;
+            color: #555;
+        }
+        
+        /* Product Modal Reviews Styles */
+        .product-modal-reviews {
+            margin-bottom: 20px;
+        }
+        
+        .product-modal-reviews h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .product-modal-reviews h3 i {
+            color: #FFD700;
+        }
+        
+        .modal-reviews-container {
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .modal-reviews-loading {
+            text-align: center;
+            padding: 15px;
+            color: #777;
+        }
+        
+        .modal-no-reviews {
+            text-align: center;
+            padding: 15px;
+            color: #777;
+            font-style: italic;
+        }
+        
+        .modal-review-item {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .modal-review-item:last-child {
+            border-bottom: none;
+        }
+        
+        .modal-review-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .modal-reviewer-image {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-size: cover;
+            background-position: center;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+        }
+        
+        .modal-reviewer-info {
+            flex: 1;
+        }
+        
+        .modal-reviewer-name {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+        
+        .modal-review-date {
+            font-size: 12px;
+            color: #777;
+        }
+        
+        .modal-review-rating {
+            display: flex;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #FFD700;
+        }
+        
+        .modal-review-content {
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        .modal-view-all-reviews {
+            text-align: center;
+            padding: 10px;
+            margin-top: 10px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            color: #e74c3c;
+            font-weight: 500;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .modal-view-all-reviews:hover {
+            background-color: #e8e8e8;
+        }
+        
+        .product-modal-quantity h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .quantity-selector {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .quantity-button {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background-color: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .quantity-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .quantity-display {
+            width: 40px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        
+        .modal-footer {
+            padding: 15px 20px;
+            background-color: #fff;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-total-price {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .modal-total-price span:first-child {
+            font-size: 12px;
+            color: #777;
+        }
+        
+        .modal-total-price span:last-child {
+            font-size: 18px;
+            font-weight: 700;
+            color: #e74c3c;
+        }
+        
+        .modal-add-to-cart {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.2s;
+        }
+        
+        .modal-add-to-cart:hover {
+            background-color: #c0392b;
+        }
+        
         .toast-notification.error {
             background-color: #dc3545;
         }
@@ -642,27 +917,70 @@ foreach ($products as $product) {
                 <?php endif; ?>
             </section>
         </div>
+        <?php include_once 'includes/chatbot/index.php'; ?>
     </main>
 
+    <!-- Product Modal -->
+    <div id="product-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="product-modal-image"></div>
+                <div class="product-modal-info">
+                    <h2 class="product-modal-name"></h2>
+                    <div class="product-modal-price"></div>
+                    <div class="product-modal-business">
+                        <div class="business-mini-image"></div>
+                        <div class="business-mini-info">
+                            <div class="business-mini-name"></div>
+                            <div class="business-mini-meta">
+                                <span class="business-mini-distance"></span>
+                                <span class="business-mini-verification"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="product-modal-description"></div>
+                    
+                    <!-- Product Reviews Section -->
+                    <div class="product-modal-reviews">
+                        <h3><i class="fas fa-star"></i> Reviews</h3>
+                        <div class="modal-reviews-container">
+                            <div class="modal-reviews-loading">
+                                <i class="fas fa-spinner fa-spin"></i> Loading reviews...
+                            </div>
+                            <div class="modal-reviews-list"></div>
+                            <div class="modal-no-reviews" style="display: none;">
+                                <p>No reviews yet for this product.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="product-modal-quantity">
+                        <h3>Quantity</h3>
+                        <div class="quantity-selector">
+                            <button class="quantity-button" id="modal-decrease-quantity" disabled><i class="fas fa-minus"></i></button>
+                            <div class="quantity-display" id="modal-quantity-value">1</div>
+                            <button class="quantity-button" id="modal-increase-quantity"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="modal-total-price">
+                    <span>Total Price</span>
+                    <span id="modal-total-price"></span>
+                </div>
+                <button class="modal-add-to-cart" id="modal-add-to-cart-btn">
+                    <i class="fas fa-cart-plus"></i> Add to Cart
+                </button>
+            </div>
+        </div>
+    </div>
+    
     <!-- Bottom Navigation -->
-    <nav class="bottom-nav">
-        <a href="index.php" class="nav-item">
-            <i class="fas fa-home"></i>
-            <span>Home</span>
-        </a>
-        <a href="businesses.php" class="nav-item active">
-            <i class="fas fa-store"></i>
-            <span>Explore</span>
-        </a>
-        <a href="orders.php" class="nav-item">
-            <i class="fas fa-shopping-bag"></i>
-            <span>Orders</span>
-        </a>
-        <a href="profile.php" class="nav-item">
-            <i class="fas fa-user"></i>
-            <span>Profile</span>
-        </a>
-    </nav>
+    <?php include_once 'includes/bottom_navigation.php'; ?>
 
     <script src="js/script.js"></script>
     <script src="src/location.js"></script>
@@ -697,15 +1015,227 @@ foreach ($products as $product) {
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Redirect to business detail page with product modal
-                        window.location.href = `business-detail.php?id=${data.product.business_id}&product_id=${productId}`;
+                        // Show product modal with details
+                        showProductModal(data.product);
                     } else {
-                        alert('Could not load product details.');
+                        showToast('Could not load product details.', 'error');
                     }
                 })
                 .catch(error => {
                     console.error('Error fetching product:', error);
-                    alert('An error occurred while loading the product.');
+                    showToast('An error occurred while loading the product.', 'error');
+                });
+        }
+        
+        // Function to show product modal
+        function showProductModal(product) {
+            // Set product details in modal
+            const modal = document.getElementById('product-modal');
+            const modalImage = modal.querySelector('.product-modal-image');
+            const modalName = modal.querySelector('.product-modal-name');
+            const modalPrice = modal.querySelector('.product-modal-price');
+            const modalBusinessImage = modal.querySelector('.business-mini-image');
+            const modalBusinessName = modal.querySelector('.business-mini-name');
+            const modalBusinessDistance = modal.querySelector('.business-mini-distance');
+            const modalBusinessVerification = modal.querySelector('.business-mini-verification');
+            const modalDescription = modal.querySelector('.product-modal-description');
+            const modalTotalPrice = document.getElementById('modal-total-price');
+            const modalAddToCartBtn = document.getElementById('modal-add-to-cart-btn');
+            
+            // Set modal content
+            modalImage.style.backgroundImage = `url('../${product.image_url || 'assets/images/default-product.jpg'}')`;            
+            modalName.textContent = product.name;
+            modalPrice.textContent = `₱${parseFloat(product.price).toFixed(2)}`;
+            modalBusinessImage.style.backgroundImage = `url('../${product.business_image || 'assets/images/default-business.jpg'}')`;            
+            modalBusinessName.textContent = product.business_name;
+            
+            // Set distance if available
+            if (product.distance) {
+                modalBusinessDistance.innerHTML = `<i class="fas fa-map-marker-alt"></i> ${product.distance} km`;
+                modalBusinessDistance.style.display = 'inline-flex';
+            } else {
+                modalBusinessDistance.style.display = 'none';
+            }
+            
+            // Set verification status
+            const verificationClass = product.verification_status === 'verified' ? 'verified' : 'pending';
+            modalBusinessVerification.innerHTML = `<i class="fas fa-check-circle ${verificationClass}"></i> ${product.verification_status === 'verified' ? 'Verified' : 'Pending'}`;
+            
+            // Set description
+            modalDescription.textContent = product.description || 'No description available';
+            
+            // Set total price
+            modalTotalPrice.textContent = `₱${parseFloat(product.price).toFixed(2)}`;
+            
+            // Set add to cart button
+            modalAddToCartBtn.onclick = () => {
+                const quantity = parseInt(document.getElementById('modal-quantity-value').textContent);
+                addToCart(product.id, quantity);
+                closeProductModal();
+            };
+            
+            // Load product reviews
+            loadProductReviews(product.id);
+            
+            // Initialize quantity selector
+            let modalQuantity = 1;
+            const modalQuantityValue = document.getElementById('modal-quantity-value');
+            const modalDecreaseBtn = document.getElementById('modal-decrease-quantity');
+            const modalIncreaseBtn = document.getElementById('modal-increase-quantity');
+            
+            modalDecreaseBtn.onclick = () => {
+                if (modalQuantity > 1) {
+                    modalQuantity--;
+                    modalQuantityValue.textContent = modalQuantity;
+                    modalTotalPrice.textContent = `₱${(parseFloat(product.price) * modalQuantity).toFixed(2)}`;
+                    modalDecreaseBtn.disabled = modalQuantity <= 1;
+                }
+            };
+            
+            modalIncreaseBtn.onclick = () => {
+                if (modalQuantity < 10) {
+                    modalQuantity++;
+                    modalQuantityValue.textContent = modalQuantity;
+                    modalTotalPrice.textContent = `₱${(parseFloat(product.price) * modalQuantity).toFixed(2)}`;
+                    modalDecreaseBtn.disabled = false;
+                    modalIncreaseBtn.disabled = modalQuantity >= 10;
+                }
+            };
+            
+            // Show the modal
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden'; // Prevent scrolling
+            
+            // Add event listener to close button
+            const closeBtn = modal.querySelector('.modal-close');
+            closeBtn.onclick = closeProductModal;
+            
+            // Close modal when clicking outside
+            window.onclick = (event) => {
+                if (event.target === modal) {
+                    closeProductModal();
+                }
+            };
+        }
+        
+        // Function to close product modal
+        function closeProductModal() {
+            const modal = document.getElementById('product-modal');
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto'; // Re-enable scrolling
+            
+            // Reset reviews section
+            const reviewsList = document.querySelector('.modal-reviews-list');
+            const reviewsLoading = document.querySelector('.modal-reviews-loading');
+            const noReviews = document.querySelector('.modal-no-reviews');
+            
+            if (reviewsList && reviewsLoading && noReviews) {
+                reviewsList.innerHTML = '';
+                reviewsLoading.style.display = 'block';
+                noReviews.style.display = 'none';
+            }
+        }
+        
+        // Function to load product reviews
+        function loadProductReviews(productId) {
+            const reviewsList = document.querySelector('.modal-reviews-list');
+            const reviewsLoading = document.querySelector('.modal-reviews-loading');
+            const noReviews = document.querySelector('.modal-no-reviews');
+            
+            // Show loading state
+            reviewsList.innerHTML = '';
+            reviewsLoading.style.display = 'block';
+            noReviews.style.display = 'none';
+            
+            // Fetch reviews via AJAX
+            fetch(`get_product_reviews.php?product_id=${productId}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Hide loading state
+                    reviewsLoading.style.display = 'none';
+                    
+                    if (data.success && data.reviews && data.reviews.length > 0) {
+                        // Display reviews (limited to 3 in the modal)
+                        const reviews = data.reviews.slice(0, 3);
+                        
+                        reviews.forEach(review => {
+                            const reviewItem = document.createElement('div');
+                            reviewItem.className = 'modal-review-item';
+                            
+                            // Create review header with user info
+                            const reviewHeader = document.createElement('div');
+                            reviewHeader.className = 'modal-review-header';
+                            
+                            const reviewerImage = document.createElement('div');
+                            reviewerImage.className = 'modal-reviewer-image';
+                            reviewerImage.style.backgroundImage = `url('${review.user_image || '../assets/images/default-user.jpg'}')`;                            
+                            
+                            const reviewerInfo = document.createElement('div');
+                            reviewerInfo.className = 'modal-reviewer-info';
+                            
+                            const reviewerName = document.createElement('div');
+                            reviewerName.className = 'modal-reviewer-name';
+                            reviewerName.textContent = review.user_name;
+                            
+                            const reviewDate = document.createElement('div');
+                            reviewDate.className = 'modal-review-date';
+                            reviewDate.textContent = new Date(review.created_at).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                            });
+                            
+                            reviewerInfo.appendChild(reviewerName);
+                            reviewerInfo.appendChild(reviewDate);
+                            
+                            reviewHeader.appendChild(reviewerImage);
+                            reviewHeader.appendChild(reviewerInfo);
+                            
+                            // Create rating stars
+                            const reviewRating = document.createElement('div');
+                            reviewRating.className = 'modal-review-rating';
+                            
+                            for (let i = 1; i <= 5; i++) {
+                                const star = document.createElement('i');
+                                star.className = i <= review.rating ? 'fas fa-star' : 'far fa-star';
+                                reviewRating.appendChild(star);
+                            }
+                            
+                            // Create review content
+                            const reviewContent = document.createElement('div');
+                            reviewContent.className = 'modal-review-content';
+                            reviewContent.textContent = review.comment;
+                            
+                            // Append all elements to review item
+                            reviewItem.appendChild(reviewHeader);
+                            reviewItem.appendChild(reviewRating);
+                            reviewItem.appendChild(reviewContent);
+                            
+                            // Add review item to list
+                            reviewsList.appendChild(reviewItem);
+                        });
+                        
+                        // Add view all reviews button if there are more than 3 reviews
+                        if (data.reviews.length > 3) {
+                            const viewAllButton = document.createElement('div');
+                            viewAllButton.className = 'modal-view-all-reviews';
+                            viewAllButton.innerHTML = `<i class="fas fa-external-link-alt"></i> View All ${data.reviews.length} Reviews`;
+                            viewAllButton.onclick = () => {
+                                window.location.href = `product-detail.php?id=${productId}#reviews`;
+                            };
+                            
+                            reviewsList.appendChild(viewAllButton);
+                        }
+                    } else {
+                        // Show no reviews message
+                        noReviews.style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading reviews:', error);
+                    reviewsLoading.style.display = 'none';
+                    noReviews.style.display = 'block';
+                    noReviews.querySelector('p').textContent = 'Error loading reviews. Please try again.';
                 });
         }
         

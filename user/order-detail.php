@@ -12,11 +12,11 @@ if (!isset($_SESSION['user_id'])) {
 $order_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 // Fetch order details
-$stmt = $pdo->prepare("SELECT o.*, b.name as business_name, b.category, b.sub_category, b.address as business_address, 
+$stmt = $pdo->prepare("SELECT o.*, b.name as business_name, b.category, b.address as business_address, 
                               b.phone as business_phone, b.image_url as business_image 
                        FROM orders o 
                        JOIN businesses b ON o.business_id = b.id 
-                       WHERE o.id = ? AND o.user_id = ?");
+                       WHERE o.id = ? AND o.customer_id = ?");
 $stmt->execute([$order_id, $_SESSION['user_id']]);
 $order = $stmt->fetch();
 
@@ -53,7 +53,7 @@ $progress_width = ($current_status + 1) / count($statuses) * 100;
     <header>
         <div class="header-container">
             <button class="back-button" onclick="history.back()"><i class="fas fa-arrow-left"></i></button>
-            <h1>Order #<?php echo $order['order_number']; ?></h1>
+            <h1>Order #<?php echo $order_id; ?></h1>
             <button class="icon-button"><i class="fas fa-ellipsis-v"></i></button>
         </div>
     </header>
@@ -95,7 +95,7 @@ $progress_width = ($current_status + 1) / count($statuses) * 100;
             </div>
             <div class="status-message">
                 <i class="fas fa-info-circle"></i>
-                <p><?php echo ucfirst($order['status']); ?>: <?php echo htmlspecialchars($order['status_message']); ?></p>
+                <p><?php echo ucfirst($order['status']); ?>: <?php echo htmlspecialchars($order['special_instructions'] ?? 'Your order is being processed.'); ?></p>
             </div>
         </section>
 
@@ -105,7 +105,7 @@ $progress_width = ($current_status + 1) / count($statuses) * 100;
                 <img src="<?php echo htmlspecialchars($order['business_image']); ?>" alt="<?php echo htmlspecialchars($order['business_name']); ?>">
                 <div>
                     <h3><?php echo htmlspecialchars($order['business_name']); ?></h3>
-                    <p><?php echo htmlspecialchars($order['category']); ?> • <?php echo htmlspecialchars($order['sub_category']); ?></p>
+                    <p><?php echo htmlspecialchars($order['category'] ?? 'General'); ?></p>
                 </div>
             </div>
             <div class="business-actions">
@@ -125,7 +125,7 @@ $progress_width = ($current_status + 1) / count($statuses) * 100;
                 <i class="fas fa-clock"></i>
                 <div>
                     <h5>Pickup Time</h5>
-                    <p><?php echo date('l, F j, Y', strtotime($order['pickup_date'])); ?>, <?php echo $order['pickup_time']; ?></p>
+                    <p><?php echo !empty($order['pickup_date']) ? date('l, F j, Y', strtotime($order['pickup_date'])) : date('l, F j, Y'); ?></p>
                 </div>
             </div>
             <div class="pickup-info">
@@ -145,22 +145,19 @@ $progress_width = ($current_status + 1) / count($statuses) * 100;
                 <div class="item-quantity"><?php echo $item['quantity']; ?> ×</div>
                 <div class="item-details">
                     <h4><?php echo htmlspecialchars($item['name']); ?></h4>
-                    <p class="item-options">Size: Small (6")</p>
+                    <?php if (!empty($item['options'])): ?>
+                    <p class="item-options"><?php echo htmlspecialchars($item['options']); ?></p>
+                    <?php endif; ?>
                 </div>
-                <div class="item-price">₱350.00</div>
+                <div class="item-price">₱<?php echo number_format($item['price'] * $item['quantity'], 2); ?></div>
             </div>
-            <div class="order-item">
-                <div class="item-quantity">1 ×</div>
-                <div class="item-details">
-                    <h4>Pandesal</h4>
-                    <p class="item-options">10 pieces</p>
-                </div>
-                <div class="item-price">₱45.00</div>
-            </div>
+            <?php endforeach; ?>
+            <?php if (!empty($order['special_instructions'])): ?>
             <div class="order-note">
                 <h5>Note to Seller</h5>
-                <p>Please write "Happy Birthday" on the cake. Thank you!</p>
+                <p><?php echo htmlspecialchars($order['special_instructions']); ?></p>
             </div>
+            <?php endif; ?>
         </section>
 
         <!-- Payment Summary -->
@@ -168,7 +165,7 @@ $progress_width = ($current_status + 1) / count($statuses) * 100;
             <h3>Payment Summary</h3>
             <div class="summary-row">
                 <span>Subtotal</span>
-                <span>₱395.00</span>
+                <span>₱<?php echo number_format($order['total_amount'] - 20, 2); ?></span>
             </div>
             <div class="summary-row">
                 <span>Service Fee</span>
@@ -176,7 +173,7 @@ $progress_width = ($current_status + 1) / count($statuses) * 100;
             </div>
             <div class="summary-row total">
                 <span>Total</span>
-                <span>₱415.00</span>
+                <span>₱<?php echo number_format($order['total_amount'], 2); ?></span>
             </div>
             <div class="payment-method">
                 <h5>Payment Method</h5>
@@ -191,11 +188,11 @@ $progress_width = ($current_status + 1) / count($statuses) * 100;
         <section class="order-info-card">
             <div class="info-row">
                 <span>Order Number</span>
-                <span>ORD12345</span>
+                <span>ORD<?php echo str_pad($order_id, 5, '0', STR_PAD_LEFT); ?></span>
             </div>
             <div class="info-row">
                 <span>Order Date</span>
-                <span>May 6, 2025, 1:30 PM</span>
+                <span><?php echo date('F j, Y, g:i A', strtotime($order['created_at'])); ?></span>
             </div>
         </section>
 
@@ -209,6 +206,9 @@ $progress_width = ($current_status + 1) / count($statuses) * 100;
         </section>
     </main>
 
+    <!-- Bottom Navigation -->
+    <?php include_once 'includes/bottom_navigation.php'; ?>
+    
     <script src="js/script.js"></script>
 </body>
 </html>

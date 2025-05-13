@@ -93,7 +93,6 @@ function getOrderItems($pdo, $order_id) {
         <button class="back-button" onclick="history.back()"><i class="fas fa-arrow-left"></i></button>
             <h1>Profile</h1>
             <?php include_once 'includes/cart_icon.php'; ?>
-            <button class="icon-button" onclick="window.location.href='settings.php'"><i class="fas fa-cog"></i></button>
         </div>
     </header>
 
@@ -191,10 +190,24 @@ function getOrderItems($pdo, $order_id) {
 
         <!-- Account Actions -->
         <section class="account-actions">
-            <button class="action-button"><i class="fas fa-question-circle"></i> Help Center</button>
-            <button class="action-button"><i class="fas fa-file-alt"></i> Terms & Privacy</button>
-            <button class="action-button danger"><i class="fas fa-sign-out-alt"></i> Log Out</button>
+            <button class="action-button" onclick="window.location.href='help-center.php'">
+                <i class="fas fa-question-circle"></i> Help Center
+            </button>
+            <button class="action-button" onclick="window.location.href='terms-privacy.php'">
+                <i class="fas fa-file-alt"></i> Terms & Privacy
+            </button>
+            <button class="action-button danger" onclick="confirmLogout()">
+                <i class="fas fa-sign-out-alt"></i> Log Out
+            </button>
         </section>
+
+        <script>
+        function confirmLogout() {
+            if (confirm('Are you sure you want to log out?')) {
+                window.location.href = 'logout.php';
+            }
+        }
+        </script>
 
         <!-- App Version -->
         <section class="app-version">
@@ -203,24 +216,7 @@ function getOrderItems($pdo, $order_id) {
     </main>
 
     <!-- Bottom Navigation -->
-    <nav class="bottom-nav">
-        <a href="index.php" class="nav-item">
-            <i class="fas fa-home"></i>
-            <span>Home</span>
-        </a>
-        <a href="businesses.php" class="nav-item">
-            <i class="fas fa-store"></i>
-            <span>Explore</span>
-        </a>
-        <a href="orders.php" class="nav-item">
-            <i class="fas fa-shopping-bag"></i>
-            <span>Orders</span>
-        </a>
-        <a href="profile.php" class="nav-item active">
-            <i class="fas fa-user"></i>
-            <span>Profile</span>
-        </a>
-    </nav>
+    <?php include_once 'includes/bottom_navigation.php'; ?>
 
     <script src="js/script.js"></script>
     <!-- Leaflet JS -->

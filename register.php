@@ -2,10 +2,17 @@
 session_start();
 require_once 'config/database.php';
 
+// Create uploads directory if it doesn't exist
+$upload_dir = 'uploads/profile_picture';
+if (!file_exists($upload_dir)) {
+    mkdir($upload_dir, 0777, true);
+}
+
 // Handle registration
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $full_name = $_POST['full_name'] ?? '';
     $email = $_POST['email'] ?? '';
+    $phone = $_POST['phone'] ?? '';
     $password = $_POST['password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
 
@@ -24,11 +31,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = "Password must be at least 6 characters long";
     }
 
+    // Validate phone number (optional)
+    if (!empty($phone) && !preg_match('/^[0-9\+\-\s\(\)]{10,15}$/', $phone)) {
+        $errors[] = "Please enter a valid phone number";
+    }
+
     // Check if email already exists
     $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
     $stmt->execute([$email]);
     if ($stmt->fetch()) {
         $errors[] = "Email already registered";
+    }
+    
+    // Handle profile picture upload
+    $profile_image_path = null;
+    if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] == 0) {
+        $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
+        $max_size = 5 * 1024 * 1024; // 5MB
+        
+        if (!in_array($_FILES['profile_picture']['type'], $allowed_types)) {
+            $errors[] = "Only JPG, PNG and GIF images are allowed";
+        } elseif ($_FILES['profile_picture']['size'] > $max_size) {
+            $errors[] = "Image size should be less than 5MB";
+        } else {
+            $file_extension = pathinfo($_FILES['profile_picture']['name'], PATHINFO_EXTENSION);
+            $filename = uniqid() . '.' . $file_extension;
+            $target_file = $upload_dir . $filename;
+            
+            if (move_uploaded_file($_FILES['profile_picture']['tmp_name'], $target_file)) {
+                $profile_image_path = $target_file;
+            } else {
+                $errors[] = "Failed to upload image. Please try again.";
+            }
+        }
     }
 
     if (empty($errors)) {
@@ -36,8 +71,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
         // Insert user as customer
-        $stmt = $pdo->prepare("INSERT INTO users (full_name, email, password, role, is_business) VALUES (?, ?, ?, 'customer', 0)");
-        $stmt->execute([$full_name, $email, $hashed_password]);
+        $stmt = $pdo->prepare("INSERT INTO users (full_name, email, phone, password, profile_image, role, is_business) VALUES (?, ?, ?, ?, ?, 'customer', 0)");
+        $stmt->execute([$full_name, $email, $phone, $hashed_password, $profile_image_path]);
 
         // Set session and redirect
         $_SESSION['user_id'] = $pdo->lastInsertId();
@@ -59,6 +94,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="user/src/styles/common/base.css">
     <link rel="stylesheet" href="user/src/styles/register/register.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .profile-upload {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .profile-preview {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            overflow: hidden;
+            margin-bottom: 10px;
+            border: 2px solid #ddd;
+            background-color: #f9f9f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .profile-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .file-input-container {
+            position: relative;
+            margin-top: 5px;
+        }
+        
+        .file-input-container input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        
+        .file-input-label {
+            display: inline-block;
+            padding: 8px 15px;
+            background-color: #0066cc;
+            color: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .file-input-label i {
+            margin-right: 5px;
+        }
+    </style>
 </head>
 <body class="register-page">
     <div class="register-container">
@@ -78,7 +169,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             <?php endif; ?>
 
-            <form method="POST" class="register-form">
+            <form method="POST" class="register-form" enctype="multipart/form-data">
                 <div class="form-group">
                     <label for="full_name">Full Name</label>
                     <div class="input-group">
@@ -95,6 +186,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="input-wrapper">
                             <i class="fas fa-envelope"></i>
                             <input type="email" id="email" name="email" required placeholder="Enter your email">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="phone">Phone Number (Optional)</label>
+                    <div class="input-group">
+                        <div class="input-wrapper">
+                            <i class="fas fa-phone"></i>
+                            <input type="tel" id="phone" name="phone" placeholder="Enter your phone number">
                         </div>
                     </div>
                 </div>
@@ -120,7 +221,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                     </div>
                 </div>
-
+                
+                <div class="form-group">
+                    <label for="profile_picture">Profile Picture (Optional)</label>
+                    <div class="profile-upload">
+                        <div class="profile-preview" id="profile-preview">
+                            <img src="user/assets/images/default-avatar.jpg" alt="Profile Preview" id="preview-image">
+                        </div>
+                        <div class="file-input-container">
+                            <input type="file" id="profile_picture" name="profile_picture" accept="image/*" onchange="previewImage(this)">
+                            <label for="profile_picture" class="file-input-label">
+                                <i class="fas fa-camera"></i> Choose Photo
+                            </label>
+                        </div>
+                    </div>
+                </div>
 
 
                 <div class="form-footer">
@@ -149,6 +264,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// Function to preview the selected profile image
+function previewImage(input) {
+    const preview = document.getElementById('preview-image');
+    
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+        }
+        
+        reader.readAsDataURL(input.files[0]);
+    }
+}
 </script>
 </body>
 </html>

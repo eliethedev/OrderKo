@@ -171,25 +171,7 @@ if (!isset($_SESSION['user_id'])) {
     </main>
 
     <!-- Bottom Navigation -->
-    <nav class="bottom-nav">
-        <a href="index.php" class="nav-item active">
-            <i class="fas fa-home"></i>
-            <span>Home</span>
-        </a>
-        <a href="businesses.php" class="nav-item">
-            <i class="fas fa-store"></i>
-            <span>Explore</span>
-        </a>
-        <a href="orders.php" class="nav-item">
-            <i class="fas fa-shopping-bag"></i>
-            <span>Orders</span>
-        </a>
-        <a href="profile.php" class="nav-item">
-            <i class="fas fa-user"></i>
-            <span>Profile</span>
-        </a>
-    </nav>
-
+    <?php include_once 'includes/bottom_navigation.php'; ?>
     <script src="src/script.js"></script>
 </body>
 </html>
