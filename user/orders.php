@@ -10,7 +10,7 @@ if (!isset($_SESSION['user_id'])) {
 
 // Fetch active orders (excluding completed and cancelled orders)
 $stmt = $pdo->prepare("SELECT o.*, b.name as business_name, b.image_url as business_image, 
-                              b.address as business_address
+                              b.address as business_address, b.category
                        FROM orders o 
                        JOIN businesses b ON o.business_id = b.id 
                        WHERE o.customer_id = ? AND o.status NOT IN ('completed', 'cancelled')
@@ -20,7 +20,7 @@ $active_orders = $stmt->fetchAll();
 
 // Fetch cancelled orders
 $stmt = $pdo->prepare("SELECT o.*, b.name as business_name, b.image_url as business_image, 
-                              b.address as business_address
+                              b.address as business_address, b.category
                        FROM orders o 
                        JOIN businesses b ON o.business_id = b.id 
                        WHERE o.customer_id = ? AND o.status = 'cancelled'
@@ -30,7 +30,7 @@ $cancelled_orders = $stmt->fetchAll();
 
 // Fetch completed orders
 $stmt = $pdo->prepare("SELECT o.*, b.name as business_name, b.image_url as business_image, 
-                              b.address as business_address
+                              b.address as business_address, b.category
                        FROM orders o 
                        JOIN businesses b ON o.business_id = b.id 
                        WHERE o.customer_id = ? AND o.status = 'completed'
@@ -40,12 +40,26 @@ $completed_orders = $stmt->fetchAll();
 
 // Function to get order items
 function getOrderItems($pdo, $order_id) {
-    $stmt = $pdo->prepare("SELECT oi.quantity, p.name, p.price 
+    $stmt = $pdo->prepare("SELECT oi.quantity, oi.price as item_price, p.name, p.price, p.description, p.image_url 
                            FROM order_items oi 
                            JOIN products p ON oi.product_id = p.id 
                            WHERE oi.order_id = ?");
     $stmt->execute([$order_id]);
     return $stmt->fetchAll();
+}
+
+// Function to get order total
+function getOrderTotal($items) {
+    $total = 0;
+    foreach ($items as $item) {
+        $total += $item['item_price'] * $item['quantity'];
+    }
+    return $total;
+}
+
+// Function to generate reference number
+function formatReferenceNumber($order_id) {
+    return 'ORD' . str_pad($order_id, 5, '0', STR_PAD_LEFT);
 }
 ?>
 
@@ -86,6 +100,179 @@ function getOrderItems($pdo, $order_id) {
         .empty-state p {
             color: #777;
             margin-bottom: 20px;
+        }
+        
+        /* Order item styling */
+        .order-item-detail {
+            display: flex;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .item-image-container {
+            width: 60px;
+            height: 60px;
+            margin-right: 15px;
+            border-radius: 8px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        
+        .item-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .item-info {
+            flex-grow: 1;
+        }
+        
+        .item-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .item-description {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+        
+        .item-price {
+            font-weight: bold;
+            color: #ff6b6b;
+        }
+        
+        /* Order details styling */
+        .order-details {
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .order-summary, .order-info, .pickup-info {
+            margin-bottom: 15px;
+        }
+        
+        .order-summary h4, .order-info h4, .pickup-info h4 {
+            margin-bottom: 10px;
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+        
+        .summary-row, .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .summary-row.total {
+            font-weight: bold;
+            color: #ff6b6b;
+            border-top: 1px dashed #ddd;
+            padding-top: 8px;
+            margin-top: 8px;
+        }
+        
+        .info-row i {
+            margin-right: 5px;
+            color: #666;
+        }
+        
+        /* Responsive styling for pickup info */
+        .pickup-info .info-row {
+            flex-direction: column;
+            margin-bottom: 12px;
+        }
+        
+        .pickup-info .info-label {
+            font-weight: bold;
+            margin-bottom: 4px;
+            color: #555;
+        }
+        
+        .pickup-info .info-value {
+            color: #333;
+            word-break: break-word;
+        }
+        
+        /* Collapsible section styling */
+        .collapsible-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 10px;
+        }
+        
+        .collapsible-header h4 {
+            margin: 0;
+            display: flex;
+            align-items: center;
+            color: #333;
+        }
+        
+        .collapsible-header h4 i {
+            margin-right: 8px;
+            color: #666;
+        }
+        
+        .collapsible-header .toggle-icon {
+            transition: transform 0.3s ease;
+            color: #666;
+        }
+        
+        .collapsible-header .toggle-icon.open {
+            transform: rotate(180deg);
+        }
+        
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .collapsible-content.open {
+            max-height: 1000px; /* Arbitrary large value */
+        }
+        
+        .order-card {
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .order-summary-preview {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 15px;
+            background-color: #f5f5f5;
+            font-weight: bold;
+            border-top: 1px dashed #ddd;
+        }
+        
+        /* Media queries for better responsiveness */
+        @media (max-width: 480px) {
+            .info-row {
+                flex-direction: column;
+            }
+            
+            .info-row span:first-child {
+                margin-bottom: 4px;
+                font-weight: bold;
+            }
+            
+            .summary-row span:last-child {
+                font-weight: bold;
+            }
         }
     </style>
 </head>
@@ -264,27 +451,105 @@ function getOrderItems($pdo, $order_id) {
                         <?php endif; ?>
                     </div>
                 </div>
-                <div class="order-items">
-                    <?php
-                    $items = getOrderItems($pdo, $order['id']);
-                    foreach ($items as $item):
-                    ?>
-                    <p><?php echo $item['quantity']; ?> × <?php echo htmlspecialchars($item['name']); ?></p>
-                    <?php endforeach; ?>
+                <div class="order-summary-preview">
+                    <span>Items (<?php echo count(getOrderItems($pdo, $order['id'])); ?>)</span>
+                    <span>₱<?php echo number_format($order['total_amount'], 2); ?></span>
                 </div>
-                <div class="order-pickup">
-                    <div class="pickup-info">
-                        <i class="fas fa-clock"></i>
-                        <div>
-                            <h5>Pickup Time</h5>
-                            <p><?php echo date('l, F j, Y, g:i A', strtotime($order['pickup_date'])); ?></p>
+                
+                <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                    <h4><i class="fas fa-shopping-basket"></i> Order Items</h4>
+                    <i class="fas fa-chevron-down toggle-icon"></i>
+                </div>
+                <div class="collapsible-content">
+                    <div class="order-items">
+                        <?php
+                        $items = getOrderItems($pdo, $order['id']);
+                        $order_total = getOrderTotal($items);
+                        foreach ($items as $item):
+                        ?>
+                        <div class="order-item-detail">
+                            <div class="item-image-container">
+                                <?php 
+                                $image_path = !empty($item['image_url']) ? $item['image_url'] : '../images/placeholder.jpg';
+                                // Make sure image path is absolute if it's not already
+                                if (!empty($item['image_url']) && strpos($item['image_url'], 'http') !== 0 && strpos($item['image_url'], '/') !== 0) {
+                                    $image_path = '../' . $item['image_url'];
+                                }
+                                ?>
+                                <img src="<?php echo htmlspecialchars($image_path); ?>" alt="<?php echo htmlspecialchars($item['name']); ?>" class="item-image">
+                            </div>
+                            <div class="item-info">
+                                <p class="item-name"><?php echo htmlspecialchars($item['name']); ?> (<?php echo $item['quantity']; ?>×)</p>
+                                <p class="item-description"><?php echo htmlspecialchars(substr($item['description'] ?? '', 0, 50) . (strlen($item['description'] ?? '') > 50 ? '...' : '')); ?></p>
+                                <p class="item-price">₱<?php echo number_format($item['item_price'] * $item['quantity'], 2); ?></p>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <div class="order-details">
+                    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                        <h4><i class="fas fa-receipt"></i> Order Summary</h4>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </div>
+                    <div class="collapsible-content">
+                        <div class="order-summary">
+                            <div class="summary-row">
+                                <span>Subtotal:</span>
+                                <span>₱<?php echo number_format($order_total, 2); ?></span>
+                            </div>
+                            <div class="summary-row">
+                                <span>Service Fee:</span>
+                                <span>₱20.00</span>
+                            </div>
+                            <div class="summary-row total">
+                                <span>Total Amount:</span>
+                                <span>₱<?php echo number_format($order['total_amount'], 2); ?></span>
+                            </div>
                         </div>
                     </div>
-                    <div class="pickup-info">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <div>
-                            <h5>Pickup Location</h5>
-                            <p><?php echo htmlspecialchars($order['business_address']); ?></p>
+                    
+                    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                        <h4><i class="fas fa-info-circle"></i> Order Details</h4>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </div>
+                    <div class="collapsible-content">
+                        <div class="order-info">
+                            <div class="info-row">
+                                <span><i class="fas fa-hashtag"></i> Reference Number:</span>
+                                <span><?php echo formatReferenceNumber($order['id']); ?></span>
+                            </div>
+                            <div class="info-row">
+                                <span><i class="fas fa-calendar-alt"></i> Order Date:</span>
+                                <span><?php echo date('F j, Y, g:i A', strtotime($order['created_at'])); ?></span>
+                            </div>
+                            <div class="info-row">
+                                <span><i class="fas fa-money-bill-wave"></i> Payment Method:</span>
+                                <span>Cash on Pickup</span>
+                            </div>
+                            <?php if (!empty($order['special_instructions'])): ?>
+                            <div class="info-row">
+                                <span><i class="fas fa-comment"></i> Special Instructions:</span>
+                                <span><?php echo htmlspecialchars($order['special_instructions']); ?></span>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    
+                    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                        <h4><i class="fas fa-map-marker-alt"></i> Pickup Details</h4>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </div>
+                    <div class="collapsible-content">
+                        <div class="pickup-info">
+                            <div class="info-row pickup-time">
+                                <div class="info-label"><i class="fas fa-clock"></i> Pickup Time:</div>
+                                <div class="info-value"><?php echo date('l, F j, Y, g:i A', strtotime($order['pickup_date'])); ?></div>
+                            </div>
+                            <div class="info-row pickup-location">
+                                <div class="info-label"><i class="fas fa-map-marker-alt"></i> Pickup Location:</div>
+                                <div class="info-value"><?php echo htmlspecialchars($order['business_address']); ?></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -324,28 +589,90 @@ function getOrderItems($pdo, $order_id) {
                     </div>
                     <div class="order-status completed">Completed</div>
                 </div>
-                <div class="order-items">
-                    <?php
-                    $items = getOrderItems($pdo, $order['id']);
-                    foreach ($items as $item):
-                    ?>
-                    <p><?php echo $item['quantity']; ?> × <?php echo htmlspecialchars($item['name']); ?></p>
-                    <?php endforeach; ?>
+                <div class="order-summary-preview">
+                    <span>Items (<?php echo count(getOrderItems($pdo, $order['id'])); ?>)</span>
+                    <span>₱<?php echo number_format($order['total_amount'], 2); ?></span>
                 </div>
-                <div class="order-pickup">
-                    <div class="pickup-info">
-                        <i class="fas fa-clock"></i>
-                        <div>
-                            <h5>Pickup Time</h5>
-                            <p><?php echo date('l, F j, Y, g:i A', strtotime($order['pickup_date'])); ?></p>
+                
+                <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                    <h4><i class="fas fa-shopping-basket"></i> Order Items</h4>
+                    <i class="fas fa-chevron-down toggle-icon"></i>
+                </div>
+                <div class="collapsible-content">
+                    <div class="order-items">
+                        <?php
+                        $items = getOrderItems($pdo, $order['id']);
+                        $order_total = getOrderTotal($items);
+                        foreach ($items as $item):
+                        ?>
+                        <div class="order-item-detail">
+                            <div class="item-image-container">
+                                <?php 
+                                $image_path = !empty($item['image_url']) ? $item['image_url'] : '../images/placeholder.jpg';
+                                // Make sure image path is absolute if it's not already
+                                if (!empty($item['image_url']) && strpos($item['image_url'], 'http') !== 0 && strpos($item['image_url'], '/') !== 0) {
+                                    $image_path = '../' . $item['image_url'];
+                                }
+                                ?>
+                                <img src="<?php echo htmlspecialchars($image_path); ?>" alt="<?php echo htmlspecialchars($item['name']); ?>" class="item-image">
+                            </div>
+                            <div class="item-info">
+                                <p class="item-name"><?php echo htmlspecialchars($item['name']); ?> (<?php echo $item['quantity']; ?>×)</p>
+                                <p class="item-description"><?php echo htmlspecialchars(substr($item['description'] ?? '', 0, 50) . (strlen($item['description'] ?? '') > 50 ? '...' : '')); ?></p>
+                                <p class="item-price">₱<?php echo number_format($item['item_price'] * $item['quantity'], 2); ?></p>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <div class="order-details">
+                    <div class="order-summary">
+                        <h4>Order Summary</h4>
+                        <div class="summary-row">
+                            <span>Subtotal:</span>
+                            <span>₱<?php echo number_format($order_total, 2); ?></span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Service Fee:</span>
+                            <span>₱20.00</span>
+                        </div>
+                        <div class="summary-row total">
+                            <span>Total Amount:</span>
+                            <span>₱<?php echo number_format($order['total_amount'], 2); ?></span>
                         </div>
                     </div>
-                    <div class="pickup-info">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <div>
-                            <h5>Pickup Location</h5>
-                            <p><?php echo htmlspecialchars($order['business_address']); ?></p>
+                    
+                    <div class="order-info">
+                        <div class="info-row">
+                            <span><i class="fas fa-hashtag"></i> Reference Number:</span>
+                            <span><?php echo formatReferenceNumber($order['id']); ?></span>
                         </div>
+                        <div class="info-row">
+                            <span><i class="fas fa-calendar-alt"></i> Order Date:</span>
+                            <span><?php echo date('F j, Y, g:i A', strtotime($order['created_at'])); ?></span>
+                        </div>
+                        <div class="info-row">
+                            <span><i class="fas fa-money-bill-wave"></i> Payment Method:</span>
+                            <span>Cash on Pickup</span>
+                        </div>
+                        <?php if (!empty($order['special_instructions'])): ?>
+                        <div class="info-row">
+                            <span><i class="fas fa-comment"></i> Special Instructions:</span>
+                            <span><?php echo htmlspecialchars($order['special_instructions']); ?></span>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <div class="pickup-info">
+                        <div class="info-row">
+                            <span><i class="fas fa-clock"></i> Pickup Time:</span>
+                            <span><?php echo date('l, F j, Y, g:i A', strtotime($order['pickup_date'])); ?></span>
+                        </div>
+                        <div class="info-row">
+                            <span><i class="fas fa-map-marker-alt"></i> Pickup Location:</span>
+                            <span><?php echo htmlspecialchars($order['business_address']); ?></span>
+                        </div>
+
                     </div>
                 </div>
                 <div class="order-actions">
@@ -397,13 +724,41 @@ function getOrderItems($pdo, $order_id) {
                         </div>
                     </div>
                 </div>
-                <div class="order-items">
-                    <?php
-                    $items = getOrderItems($pdo, $order['id']);
-                    foreach ($items as $item):
-                    ?>
-                    <p><?php echo $item['quantity']; ?> × <?php echo htmlspecialchars($item['name']); ?></p>
-                    <?php endforeach; ?>
+                <div class="order-summary-preview">
+                    <span>Items (<?php echo count(getOrderItems($pdo, $order['id'])); ?>)</span>
+                    <span>₱<?php echo number_format($order['total_amount'], 2); ?></span>
+                </div>
+                
+                <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                    <h4><i class="fas fa-shopping-basket"></i> Order Items</h4>
+                    <i class="fas fa-chevron-down toggle-icon"></i>
+                </div>
+                <div class="collapsible-content">
+                    <div class="order-items">
+                        <?php
+                        $items = getOrderItems($pdo, $order['id']);
+                        $order_total = getOrderTotal($items);
+                        foreach ($items as $item):
+                        ?>
+                        <div class="order-item-detail">
+                            <div class="item-image-container">
+                                <?php 
+                                $image_path = !empty($item['image_url']) ? $item['image_url'] : '../images/placeholder.jpg';
+                                // Make sure image path is absolute if it's not already
+                                if (!empty($item['image_url']) && strpos($item['image_url'], 'http') !== 0 && strpos($item['image_url'], '/') !== 0) {
+                                    $image_path = '../' . $item['image_url'];
+                                }
+                                ?>
+                                <img src="<?php echo htmlspecialchars($image_path); ?>" alt="<?php echo htmlspecialchars($item['name']); ?>" class="item-image">
+                            </div>
+                            <div class="item-info">
+                                <p class="item-name"><?php echo htmlspecialchars($item['name']); ?> (<?php echo $item['quantity']; ?>×)</p>
+                                <p class="item-description"><?php echo htmlspecialchars(substr($item['description'] ?? '', 0, 50) . (strlen($item['description'] ?? '') > 50 ? '...' : '')); ?></p>
+                                <p class="item-price">₱<?php echo number_format($item['item_price'] * $item['quantity'], 2); ?></p>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
                 <div class="order-pickup">
                     <div class="pickup-info">
@@ -489,6 +844,21 @@ function getOrderItems($pdo, $order_id) {
             
             if (activeButton) {
                 activeButton.classList.add('active');
+            }
+        }
+        
+        // Function to toggle collapsible sections
+        function toggleCollapsible(header) {
+            const content = header.nextElementSibling;
+            const icon = header.querySelector('.toggle-icon');
+            
+            // Toggle the content
+            if (content.classList.contains('open')) {
+                content.classList.remove('open');
+                icon.classList.remove('open');
+            } else {
+                content.classList.add('open');
+                icon.classList.add('open');
             }
         }
         
@@ -599,7 +969,7 @@ function getOrderItems($pdo, $order_id) {
             } else {
                 // Show active orders by default
                 showOrderTab('active');
-            }
+            } 
             
             // Add event listener for cancel reason dropdown
             const cancelReasonSelect = document.getElementById('cancel-reason');
