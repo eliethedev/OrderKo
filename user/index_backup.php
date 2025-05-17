@@ -360,7 +360,7 @@ function getBusinessTag($business) {
                 <?php foreach ($popular_products as $product): ?>
                 <div class="product-card" onclick="location.href='business-detail.php?id=<?php echo $product['business_id']; ?>#product-<?php echo $product['id']; ?>'">
                     <div class="product-image" style="background-image: url('../<?php echo htmlspecialchars($product['image_url'] ?: 'assets/images/default-product.jpg'); ?>')">
-                        <?php if (isset($product['discount_price']) && !empty($product['discount_price']) && $product['discount_price'] < $product['price']): ?>
+                        <?php if ($product['discount_price'] && $product['discount_price'] < $product['price']): ?>
                         <span class="product-tag">Sale</span>
                         <?php endif; ?>
                     </div>
@@ -369,7 +369,7 @@ function getBusinessTag($business) {
                         <p class="product-business"><?php echo htmlspecialchars($product['business_name']); ?></p>
                         <div class="product-meta">
                             <span class="product-price">
-                                <?php if (isset($product['discount_price']) && !empty($product['discount_price']) && $product['discount_price'] < $product['price']): ?>
+                                <?php if ($product['discount_price'] && $product['discount_price'] < $product['price']): ?>
                                 <span class="original-price">₱<?php echo number_format($product['price'], 2); ?></span>
                                 ₱<?php echo number_format($product['discount_price'], 2); ?>
                                 <?php else: ?>
@@ -403,7 +403,7 @@ function getBusinessTag($business) {
                 <?php foreach ($all_products as $product): ?>
                 <div class="product-card" onclick="location.href='business-detail.php?id=<?php echo $product['business_id']; ?>#product-<?php echo $product['id']; ?>'">
                     <div class="product-image" style="background-image: url('../<?php echo htmlspecialchars($product['image_url'] ?: 'assets/images/default-product.jpg'); ?>')">
-                        <?php if (isset($product['discount_price']) && !empty($product['discount_price']) && $product['discount_price'] < $product['price']): ?>
+                        <?php if ($product['discount_price'] && $product['discount_price'] < $product['price']): ?>
                         <span class="product-tag">Sale</span>
                         <?php endif; ?>
                     </div>
@@ -413,7 +413,7 @@ function getBusinessTag($business) {
                         <div class="product-meta">
                             
                             <span class="product-price">
-                                <?php if (isset($product['discount_price']) && !empty($product['discount_price']) && $product['discount_price'] < $product['price']): ?>
+                                <?php if ($product['discount_price'] && $product['discount_price'] < $product['price']): ?>
                                 <span class="original-price">₱<?php echo number_format($product['price'], 2); ?></span>
                                 ₱<?php echo number_format($product['discount_price'], 2); ?>
                                 <?php else: ?>

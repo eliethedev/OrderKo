@@ -12,7 +12,7 @@ if (!file_exists($upload_dir)) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $full_name = $_POST['full_name'] ?? '';
     $email = $_POST['email'] ?? '';
-    $phone = $_POST['phone'] ?? '';
+    $phone_number = $_POST['phone_number'] ?? '';
     $password = $_POST['password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
 
@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Validate phone number (optional)
-    if (!empty($phone) && !preg_match('/^[0-9\+\-\s\(\)]{10,15}$/', $phone)) {
+    if (!empty($phone_number) && !preg_match('/^[0-9\+\-\s\(\)]{10,15}$/', $phone_number)) {
         $errors[] = "Please enter a valid phone number";
     }
 
@@ -71,8 +71,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
         // Insert user as customer
-        $stmt = $pdo->prepare("INSERT INTO users (full_name, email, phone, password, profile_image, role, is_business) VALUES (?, ?, ?, ?, ?, 'customer', 0)");
-        $stmt->execute([$full_name, $email, $phone, $hashed_password, $profile_image_path]);
+        $stmt = $pdo->prepare("INSERT INTO users (full_name, email, phone_number, password, profile_picture, role, is_business) VALUES (?, ?, ?, ?, ?, 'customer', 0)");
+        $stmt->execute([$full_name, $email, $phone_number, $hashed_password, $profile_image_path]);
 
         // Set session and redirect
         $_SESSION['user_id'] = $pdo->lastInsertId();
@@ -195,7 +195,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="input-group">
                         <div class="input-wrapper">
                             <i class="fas fa-phone"></i>
-                            <input type="tel" id="phone" name="phone" placeholder="Enter your phone number">
+                            <input type="tel" id="phone_number" name="phone_number" placeholder="Enter your phone number">
                         </div>
                     </div>
                 </div>

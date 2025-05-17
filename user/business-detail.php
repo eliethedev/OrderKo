@@ -686,7 +686,7 @@ $products = $stmt->fetchAll();
                     const marker = L.marker([<?php echo $business['latitude']; ?>, <?php echo $business['longitude']; ?>]).addTo(businessMap);
                     marker.bindPopup("<?php echo htmlspecialchars(addslashes($business['name'])); ?>").openPopup();
                     
-                    // Invalidate size to handle any rendering issues
+                    // Invalidate size to handle any rendering issues   
                     businessMap.invalidateSize();
                     console.log('Map initialized successfully');
                 } catch (e) {
